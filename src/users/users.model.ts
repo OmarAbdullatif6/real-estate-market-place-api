@@ -26,12 +26,6 @@ export class User {
   @Prop({ type: String, enum: UserRole, default: UserRole.BUYER })
   role: UserRole;
 
-  @Prop({ default: false })
-  isSubscribed: boolean;
-
-  @Prop({ type: Date, default: null })
-  subscriptionExpiresAt: Date | null;
-
   @Prop({
     type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Listing' }],
     default: [],
