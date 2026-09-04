@@ -76,6 +76,15 @@ export class Listing {
   @Prop({ type: PointLocationSchema, required: true })
   location: PointLocation;
 
+  @Prop({type:Number, min:0, default:0})
+  viewingCount:number
+
+  @Prop({type:Number, min:0, default:0})
+  favouritesCount:number
+
+  @Prop({type:Date, default:true})
+  soldAt:Date
+
   // Moderation state
   @Prop({ 
     type: String, 
