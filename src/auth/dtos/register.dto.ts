@@ -1,5 +1,4 @@
-import { IsString, IsNotEmpty, IsEmail, IsStrongPassword, IsInt, Min, Max, Matches, IsEnum, Length } from "class-validator";
-import { UserRole } from "../../types/userRole.type";
+import { IsString, IsNotEmpty, IsEmail, IsStrongPassword, IsEnum, Length } from "class-validator";
 import { Transform } from "class-transformer";
 export enum RegisterUserRole {
     BUYER = 'buyer',
@@ -8,13 +7,13 @@ export enum RegisterUserRole {
 export class RegisterDto {
     @IsString()
     @IsNotEmpty()
-    @Length(3,50)
+    @Length(3, 150)
     @Transform(({ value }) => value?.trim())
     fullName: string;
     
-    @Transform(({ value }) => value?.trim())
     @IsNotEmpty()
     @IsEmail()
+    @Transform(({ value }) => value?.trim())
     email: string;
 
     @IsString()
@@ -24,10 +23,6 @@ export class RegisterDto {
 
     @IsString()
     @IsNotEmpty()
-    @Matches(/^01[0125][0-9]{8}$/, {
-        message: 'Invalid Egyptian phone number'
-    }
-    )
     phoneNumber: string;
 
     @IsEnum(RegisterUserRole)

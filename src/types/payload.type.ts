@@ -1,4 +1,4 @@
-import { UserRole } from "./userRole.type "
+import { UserRole } from "./userRole.type"
 
 export type PayloadType = {
     id:string,
