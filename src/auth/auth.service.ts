@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Model } from 'mongoose';
 import { User } from '../users/users.model';
 import { InjectModel } from '@nestjs/mongoose';
@@ -10,7 +15,7 @@ import { JwtService } from '@nestjs/jwt';
 export class AuthService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
   ) {}
 
   public async register(registerDto: RegisterDto) {
@@ -19,32 +24,46 @@ export class AuthService {
     if (existedUser) throw new BadRequestException('email already exists');
 
     const hashedPassword = await this.hashPassword(password);
-
-    const newUser = await this.userModel.create({
-      ...registerDto,
-      password: hashedPassword,
-    });
-    await newUser.save();
-    const token = await this.generateToken(newUser._id.toString(), newUser.email, newUser.role)
-    return {user:newUser, token}
+    let newUser;
+    try {
+      newUser = await this.userModel.create({
+        ...registerDto,
+        password: hashedPassword,
+      });
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ConflictException('Phone number is already in use');
+      }
+      throw error;
+    }
+    const token = await this.generateToken(
+      newUser._id.toString(),
+      newUser.email,
+      newUser.role,
+    );
+    return { user: newUser, token };
   }
 
-  public async login(loginDto:LoginDto){
-    const user = await this.userModel.findOne({email:loginDto.email})
-    if(!user){
-      throw new UnauthorizedException("Invalid email or password")
+  public async login(loginDto: LoginDto) {
+    const user = await this.userModel.findOne({ email: loginDto.email }).select("+password");
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     const isMatch = await bcrypt.compare(loginDto.password, user.password);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const token = await this.generateToken(user._id.toString(), user.email, user.role);
+    const token = await this.generateToken(
+      user._id.toString(),
+      user.email,
+      user.role,
+    );
 
     return {
       user,
-      token
-    }
+      token,
+    };
   }
 
   private async hashPassword(password: string): Promise<string> {
@@ -52,9 +71,12 @@ export class AuthService {
     return bcrypt.hash(password, salt);
   }
 
-  private async generateToken(id: string, email: string, role:string): Promise<string> {
+  private async generateToken(
+    id: string,
+    email: string,
+    role: string,
+  ): Promise<string> {
     const payload = { id, email, role };
     return this.jwtService.signAsync(payload);
   }
-
 }
