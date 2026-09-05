@@ -52,7 +52,7 @@ export class AuthService {
 
     const isMatch = await bcrypt.compare(loginDto.password, user.password);
     if (!isMatch) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid email or password');
     }
     const token = await this.generateToken(
       user._id.toString(),
