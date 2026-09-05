@@ -37,9 +37,18 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config, {
     include: [AuthModule],
   });
-  SwaggerModule.setup('api-docs', app, document);
+  const SWAGGER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2';
+
+  SwaggerModule.setup('api-docs', app, document, {
+    customCssUrl: [`${SWAGGER_CDN}/swagger-ui.min.css`],
+    customJs: [
+      `${SWAGGER_CDN}/swagger-ui-bundle.js`,
+      `${SWAGGER_CDN}/swagger-ui-standalone-preset.js`,
+    ],
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
+
 
