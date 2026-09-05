@@ -10,19 +10,20 @@ export class AuthService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
   ) {}
 
-  public async register(dto: RegisterDto) {
-    const { email, password } = dto;
+  public async register(registerDto: RegisterDto) {
+    const { email, password } = registerDto;
     const existedUser = await this.userModel.findOne({ email });
     if (existedUser) throw new BadRequestException('email already exists');
+    
     const hashedPassword = await this.hashPassword(password);
 
     const newUser = await this.userModel.create({
-        ...dto,
+        ...registerDto,
         password:hashedPassword
     });
     return newUser.save()
   }
-  
+
   public async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);
