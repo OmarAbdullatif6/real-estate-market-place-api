@@ -12,7 +12,7 @@ import { AuthModule } from './auth/auth.module';
     DatabaseModule,
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV}`
+      envFilePath: process.env.NODE_ENV !== "production" ? `.env.${process.env.NODE_ENV}`:".env"
     })
 
   ],
