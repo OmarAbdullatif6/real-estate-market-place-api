@@ -54,7 +54,24 @@ export class UsersController {
         return this.favoritesProvider.getOneBy(payload.id, listingId);
     }
 
+    @Delete('favorites/clear')
+    @UseGuards(AuthGuard)
+    @ApiOperation({
+        summary: 'Clear all user favorites',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'All favorites cleared successfully',
+    })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - valid JWT token is required',
+    })
+    public clearUserFavorites(@CurrentUser() payload: PayloadType) {
+        return this.favoritesProvider.clear(payload.id)
+    }
 
+
+    
     @Delete('favorites/:id')
     @UseGuards(AuthGuard)
     @ApiOperation({
@@ -72,22 +89,5 @@ export class UsersController {
     })
     public removeListingFromFavorites(@CurrentUser() payload: PayloadType, @Param('id', ParseObjectIdPipe) listingId: string) {
         return this.favoritesProvider.remove(payload.id, listingId);
-    }
-
-
-    @Delete('favorites/clear')
-    @UseGuards(AuthGuard)
-    @ApiOperation({
-        summary: 'Clear all user favorites',
-    })
-    @ApiResponse({
-        status: 200,
-        description: 'All favorites cleared successfully',
-    })
-    @ApiUnauthorizedResponse({
-        description: 'Unauthorized - valid JWT token is required',
-    })
-    public clearUserFavorites(@CurrentUser() payload: PayloadType) {
-        return this.favoritesProvider.clear(payload.id)
     }
 }

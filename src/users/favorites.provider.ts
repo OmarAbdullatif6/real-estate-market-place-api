@@ -62,6 +62,7 @@ export class FavoritesProvider {
     const user = await this.usersService.getOneBy(userId);
     if (user.favorites.length == 0) return {
         message: 'No items in favorites',
+        favorites: user.favorites
     };
     user.favorites = [];
     await user.save();
