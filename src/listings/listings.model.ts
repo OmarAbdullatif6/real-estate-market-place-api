@@ -26,7 +26,7 @@ export class PointLocation {
   @Prop({ type: String, enum: ['Point'], default: 'Point', required: true })
   type: string;
 
-  @Prop({ type: [Number], required: true }) 
+  @Prop({ type: [Number], required: true })
   coordinates: number[];
 
   @Prop({ required: true, trim: true })
@@ -40,7 +40,12 @@ const PointLocationSchema = SchemaFactory.createForClass(PointLocation);
 
 @Schema({ timestamps: true })
 export class Listing {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
   owner: Types.ObjectId;
 
   @Prop({ required: true, trim: true })
@@ -76,21 +81,24 @@ export class Listing {
   @Prop({ type: PointLocationSchema, required: true })
   location: PointLocation;
 
-  @Prop({type:Number, min:0, default:0})
-  viewingCount:number
+  @Prop({ type: Number, min: 0, default: 0 })
+  viewingCount: number;
 
-  @Prop({type:Number, min:0, default:0})
-  favouritesCount:number
+  @Prop({ type: Number, min: 0, default: 0 })
+  favouritesCount: number;
 
-  @Prop({type:Date, default:true})
-  soldAt:Date
+  @Prop({ type: Date, default: Date.now })
+  createdAt: Date;
+
+  @Prop({ type: Date, default: null })
+  soldAt: Date;
 
   // Moderation state
-  @Prop({ 
-    type: String, 
-    enum: ListingStatus, 
-    default: ListingStatus.PENDING, 
-    index: true 
+  @Prop({
+    type: String,
+    enum: ListingStatus,
+    default: ListingStatus.PENDING,
+    index: true,
   })
   status: ListingStatus;
 
