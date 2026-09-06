@@ -4,6 +4,7 @@ import { AuthService } from "./auth.service";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { UsersModule } from "../users/users.module";
+import { MailModule } from "../mail/mail.module";
 
 
 @Module({
@@ -11,7 +12,7 @@ import { UsersModule } from "../users/users.module";
     providers:[AuthService],
     imports:[
       forwardRef(()=>UsersModule),
-
+      MailModule,
       JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
