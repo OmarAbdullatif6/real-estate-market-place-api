@@ -44,11 +44,11 @@ async function bootstrap() {
       'access-token',
     )
     .addTag('Users - Favorites')
-    .addTag('Admins')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
     include: [AuthModule, UsersModule, AdminsModule],
+    autoTagControllers: false,
   });
   const SWAGGER_CDN =
     'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2';

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../users/users.model';
@@ -8,6 +8,7 @@ import {
   ListingStatus,
 } from '../listings/listings.model';
 import { UserRole } from '../types/userRole.type';
+import { PaginationQueryDto } from './dtos/pagination-query.dto';
 
 @Injectable()
 export class AdminsService {
@@ -17,6 +18,7 @@ export class AdminsService {
     private readonly listingModel: Model<ListingDocument>,
   ) {}
 
+  // Dashboard stats
   async getDashboardStats() {
     const now = new Date();
 
@@ -89,4 +91,130 @@ export class AdminsService {
       newListingsThisMonth,
     };
   }
+
+  //Listings
+  async getAllListings(query: PaginationQueryDto) {
+    const { page = 1, limit = 10, status, search } = query;
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, unknown> = {};
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (search) {
+      filter.title = { $regex: search, $options: 'i' };
+    }
+
+    const [data, total] = await Promise.all([
+      this.listingModel
+        .find(filter)
+        .populate('owner', 'fullName email phoneNumber')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      this.listingModel.countDocuments(filter),
+    ]);
+
+    return {
+      message: 'Listings retrieved successfully',
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getOneListing(id: string) {
+    const listing = await this.listingModel
+      .findById(id)
+      .populate('owner', 'fullName email phoneNumber');
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    return {
+      message: 'Listing retrieved successfully',
+      data: listing,
+    };
+  }
+
+  async approveListing(id: string, adminId: string) {
+    const listing = await this.listingModel.findById(id);
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    if (listing.status === ListingStatus.APPROVED) {
+      return {
+        message: 'Listing is already approved',
+        data: listing,
+      };
+    }
+
+    const updated = await this.listingModel.findByIdAndUpdate(
+      id,
+      {
+        status: ListingStatus.APPROVED,
+        rejectionReason: null,
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+      },
+      { new: true },
+    );
+
+    return {
+      message: 'Listing approved successfully',
+      data: updated,
+    };
+  }
+
+  async rejectListing(id: string, adminId: string, reason: string) {
+    const listing = await this.listingModel.findById(id);
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    if (listing.status === ListingStatus.REJECTED) {
+      return {
+        message: 'Listing is already rejected',
+        data: listing,
+      };
+    }
+
+    const updated = await this.listingModel.findByIdAndUpdate(
+      id,
+      {
+        status: ListingStatus.REJECTED,
+        rejectionReason: reason,
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+      },
+      { new: true },
+    );
+
+    return {
+      message: 'Listing rejected successfully',
+      data: updated,
+    };
+  }
+
+  async removeListing(id: string) {
+    const listing = await this.listingModel.findByIdAndDelete(id);
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    return {
+      message: 'Listing removed successfully',
+    };
+  }
+
+  //Users
 }
