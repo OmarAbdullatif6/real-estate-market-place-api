@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -6,12 +6,17 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiUnauthorizedResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { RefreshTokenDto } from './dtos/refresh-token.dto';
+import { AuthGuard } from './guards/auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { PayloadType } from '../types/payload.type';
 
 @ApiTags('Auth')
 @Controller('/users/auth')
@@ -86,6 +91,51 @@ export class AuthController {
   })
   public resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Post('/refresh-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token using a valid refresh token' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Tokens refreshed successfully',
+    schema: {
+      example: {
+        token: 'eyJhbGciOi...',
+        accessToken: 'eyJhbGciOi...',
+        refreshToken: 'eyJhbGciOi...',
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid, expired, or revoked refresh token',
+  })
+  public refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshToken(refreshTokenDto);
+  }
+
+  @Post('/logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'User logout and refresh token revocation' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Logged out successfully',
+    schema: {
+      example: {
+        message: 'Logged out successfully',
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - invalid or missing token',
+  })
+  public logout(@CurrentUser() user: PayloadType) {
+    return this.authService.logout(user.id);
   }
 }
 
