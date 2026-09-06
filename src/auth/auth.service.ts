@@ -30,7 +30,7 @@ export class AuthService {
         ...registerDto,
         password: hashedPassword,
       });
-    } catch (error) {
+    } catch (error:any) {
       if (error.code === 11000) {
         throw new ConflictException('Phone number is already in use');
       }
