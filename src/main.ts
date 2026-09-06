@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { AdminsModule } from './admins/admins.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -43,12 +44,14 @@ async function bootstrap() {
       'access-token',
     )
     .addTag('Users - Favorites')
+    .addTag('Admins')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    include: [AuthModule, UsersModule],
+    include: [AuthModule, UsersModule, AdminsModule],
   });
-  const SWAGGER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2';
+  const SWAGGER_CDN =
+    'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.18.2';
 
   SwaggerModule.setup('api-docs', app, document, {
     customCssUrl: [`${SWAGGER_CDN}/swagger-ui.min.css`],
@@ -61,5 +64,3 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
-
-

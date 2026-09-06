@@ -8,7 +8,7 @@ import { AuthModule } from '../auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  exports: [MongooseModule],
+  exports: [MongooseModule, UsersService],
 
   imports: [
     JwtModule,
