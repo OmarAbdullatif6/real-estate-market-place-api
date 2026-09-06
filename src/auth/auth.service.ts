@@ -54,7 +54,6 @@ export class AuthService {
 
     return {
       user: newUser,
-      token: accessToken,
       accessToken,
       refreshToken,
     };
@@ -81,7 +80,6 @@ export class AuthService {
 
     return {
       user,
-      token: accessToken,
       accessToken,
       refreshToken,
     };
@@ -126,7 +124,6 @@ export class AuthService {
     await this.updateRefreshTokenHash(user._id.toString(), refreshToken);
 
     return {
-      token: accessToken,
       accessToken,
       refreshToken,
     };
