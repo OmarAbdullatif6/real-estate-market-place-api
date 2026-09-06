@@ -111,7 +111,7 @@ export class AuthService {
       message: 'If an account with that email exists, a reset link has been sent.',
     };
   }
-
+ 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const tokenHash = crypto
       .createHash('sha256')
