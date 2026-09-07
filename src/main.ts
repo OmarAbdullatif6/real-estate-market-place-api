@@ -7,6 +7,7 @@ import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AdminsModule } from './admins/admins.module';
+import { ListingsModule } from './listings/listings.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -47,7 +48,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    include: [AuthModule, UsersModule, AdminsModule],
+    include: [AuthModule, UsersModule, AdminsModule, ListingsModule],
     autoTagControllers: false,
   });
   const SWAGGER_CDN =

@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { Listing } from './listings.model';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Listing, ListingStatus } from './listings.model';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { CreateListingDto } from './dtos/createListing.dto';
@@ -49,7 +49,14 @@ export class ListingsService {
     return createdListing.save();
   }
 
-  async findOneById(id: string): Promise<Listing | null> {
-    return this.listingModel.findById(id).exec();
+  async findOneById(id: string): Promise<Listing> {
+    const listing = await this.listingModel.findById(id).exec();
+    if (!listing) {
+      throw new NotFoundException(`Listing with ID ${id} not found`);
+    }
+    if (listing.status !== ListingStatus.APPROVED) {
+      throw new NotFoundException(`Listing with ID ${id} is not approved`);
+    }
+    return listing;
   }
 }
