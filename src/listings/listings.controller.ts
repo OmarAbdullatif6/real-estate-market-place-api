@@ -154,24 +154,26 @@ export class ListingsController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Get a property listing by ID',
+    summary: 'Get an approved listing by ID',
     description:
-      'Returns the complete details of a property listing using its unique ID.',
+      'Retrieves a property listing by its unique ID. ' +
+      'Only listings with an APPROVED moderation status are accessible through this endpoint.',
   })
   @ApiParam({
     name: 'id',
-    description: 'Unique ID of the property listing',
+    description: 'Unique identifier of the property listing',
     example: '68bd123456789abcdef123456',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Property listing retrieved successfully.',
+    description: 'Approved property listing retrieved successfully.',
     schema: {
       example: {
         _id: '68bd123456789abcdef123456',
         owner: '68bd987654321abcdef123456',
         title: 'Modern 3-Bedroom Apartment',
-        description: 'Spacious apartment located in a prime residential area.',
+        description:
+          'Spacious 3-bedroom apartment located in a prime residential area.',
         price: 2500000,
         listingType: 'sale',
         propertyType: 'apartment',
@@ -179,7 +181,8 @@ export class ListingsController {
         bedrooms: 3,
         bathrooms: 2,
         images: [
-          'https://res.cloudinary.com/example/image/upload/v123/apartment-1.jpg',
+          'https://res.cloudinary.com/example/image/upload/apartment-1.jpg',
+          'https://res.cloudinary.com/example/image/upload/apartment-2.jpg',
         ],
         amenities: ['Parking', 'Swimming Pool', 'Security'],
         location: {
@@ -188,18 +191,18 @@ export class ListingsController {
           address: '15 El Tahrir Street',
           city: 'Cairo',
         },
-        viewingCount: 0,
-        favouritesCount: 0,
-        status: 'pending',
+        viewingCount: 42,
+        favouritesCount: 12,
+        status: 'approved',
         rejectionReason: null,
-        reviewedBy: null,
-        reviewedAt: null,
+        reviewedBy: '68bd987654321abcdef123456',
+        reviewedAt: '2026-09-06T15:30:00.000Z',
         isAvailable: true,
         isPromoted: false,
         promotedUntil: null,
         soldAt: null,
-        createdAt: '2026-09-07T10:00:00.000Z',
-        updatedAt: '2026-09-07T10:00:00.000Z',
+        createdAt: '2026-09-05T10:00:00.000Z',
+        updatedAt: '2026-09-06T15:30:00.000Z',
       },
     },
   })
@@ -207,7 +210,8 @@ export class ListingsController {
     description: 'The provided listing ID is invalid.',
   })
   @ApiNotFoundResponse({
-    description: 'No property listing was found with the provided ID.',
+    description:
+      'The listing was not found or the listing has not been approved.',
   })
   findOne(@Param('id') id: string) {
     return this.listingsService.findOneById(id);
