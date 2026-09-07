@@ -17,15 +17,57 @@ import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import crypto from 'node:crypto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
+import { OAuth2Client } from 'google-auth-library';
+import { UserRole } from '../types/userRole.type';
 
 @Injectable()
 export class AuthService {
+  private googleClient: OAuth2Client;
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.googleClient = new OAuth2Client(this.configService.get<string>("GOOGLE_CLIENT_ID"))
+  }
+
+  public async googleAuth(idToken: string) {
+    let payload;
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+    if (!payload || !payload.email) {
+      throw new BadRequestException('Google account must have an email associated');
+    }
+    const googleId = payload.sub;
+    const { email, name } = payload;
+    let user = await this.userModel.findOne({
+      $or: [{ googleId }, { email }],
+    });
+    if (!user) {
+      user = await this.userModel.create({
+        fullName: name || email.split('@')[0],
+        email,
+        googleId,
+      });
+    } else if (!user.googleId) {
+      user.googleId = googleId;
+      await user.save();
+    }
+    const tokens = await this.generateTokens(user._id.toString(), user.email, user.role);
+    await this.updateRefreshTokenHash(user._id.toString(), tokens.refreshToken);
+    return {
+      user: this.sanitizeUser(user),
+      ...tokens,
+    };
+  }
 
   public async register(registerDto: RegisterDto) {
     const { email, password } = registerDto;
@@ -37,6 +79,7 @@ export class AuthService {
     try {
       newUser = await this.userModel.create({
         ...registerDto,
+        role: registerDto.userRole as unknown as UserRole,
         password: hashedPassword,
       });
     } catch (error: any) {
@@ -53,7 +96,7 @@ export class AuthService {
     await this.updateRefreshTokenHash(newUser._id.toString(), refreshToken);
 
     return {
-      user: newUser,
+      user: this.sanitizeUser(newUser),
       accessToken,
       refreshToken,
     };
@@ -64,6 +107,10 @@ export class AuthService {
       .findOne({ email: loginDto.email })
       .select('+password');
     if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.password) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -79,7 +126,7 @@ export class AuthService {
     await this.updateRefreshTokenHash(user._id.toString(), refreshToken);
 
     return {
-      user,
+      user: this.sanitizeUser(user),
       accessToken,
       refreshToken,
     };
@@ -223,7 +270,25 @@ export class AuthService {
       password: newPasswordHash,
       resetPasswordToken: null,
       resetPasswordExpires: null,
+      refreshTokenHash: null,
     });
+  }
+
+  private sanitizeUser(user: any) {
+    const raw = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+    delete raw.password;
+    delete raw.refreshTokenHash;
+    delete raw.resetPasswordToken;
+    delete raw.resetPasswordExpires;
+    delete raw.__v;
+
+    if (raw._id && !raw.id) {
+      raw.id = raw._id.toString();
+    }
+    if (raw.fullName && !raw.name) {
+      raw.name = raw.fullName;
+    }
+    return raw;
   }
 
   private async hashPassword(password: string): Promise<string> {
