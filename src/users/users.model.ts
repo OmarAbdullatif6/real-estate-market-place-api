@@ -51,8 +51,8 @@ export class User {
   @Prop({ required: false, trim: true, unique: true, sparse: true })
   phoneNumber: string;
 
-  @Prop({ type: String, default: null, unique: true, sparse: true })
-  googleId?: string | null;
+  @Prop({ type: String, unique: true, sparse: true })
+  googleId?: string;
 
   @Prop({ type: String, enum: UserRole, default: UserRole.BUYER })
   role: UserRole;

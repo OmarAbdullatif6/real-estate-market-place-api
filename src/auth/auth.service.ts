@@ -101,9 +101,15 @@ export class AuthService {
 
   public async register(registerDto: RegisterDto) {
     const email = registerDto.email.trim().toLowerCase();
+    const phoneNumber = registerDto.phoneNumber.trim();
     const { password } = registerDto;
     const existedUser = await this.userModel.findOne({ email });
     if (existedUser) throw new BadRequestException('email already exists');
+
+    const existedPhone = await this.userModel.findOne({ phoneNumber });
+    if (existedPhone) {
+      throw new ConflictException('Phone number is already in use');
+    }
 
     const hashedPassword = await this.hashPassword(password);
     const otp = this.generateOtp();
@@ -115,6 +121,7 @@ export class AuthService {
       newUser = await this.userModel.create({
         ...registerDto,
         email,
+        phoneNumber,
         role: registerDto.userRole as unknown as UserRole,
         password: hashedPassword,
         otpHash,
@@ -122,7 +129,19 @@ export class AuthService {
       });
     } catch (error: any) {
       if (error.code === 11000) {
-        throw new ConflictException('Phone number is already in use');
+        if (
+          error.keyPattern?.phoneNumber ||
+          error.message?.includes('phoneNumber')
+        ) {
+          throw new ConflictException('Phone number is already in use');
+        }
+        if (error.keyPattern?.email || error.message?.includes('email')) {
+          throw new ConflictException('Email is already in use');
+        }
+        if (error.keyPattern?.googleId || error.message?.includes('googleId')) {
+          throw new ConflictException('Google account is already in use');
+        }
+        throw new ConflictException('A user with these details already exists');
       }
       throw error;
     }
