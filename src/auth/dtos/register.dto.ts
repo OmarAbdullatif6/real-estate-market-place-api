@@ -51,6 +51,7 @@ export class RegisterDto {
   })
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => value?.trim())
   phoneNumber: string;
 
   @ApiProperty({
