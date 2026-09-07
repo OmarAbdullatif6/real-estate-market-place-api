@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   HttpStatus,
   HttpCode,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -39,6 +40,7 @@ import { ImageFilesPipe } from '../pipes/image-files.pipe';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Multer } from 'multer';
+import { UpdateListingDto } from './dtos/updateListing.dto';
 
 @ApiTags('Listings')
 @Controller('listings')
@@ -215,5 +217,78 @@ export class ListingsController {
   })
   findOne(@Param('id') id: string) {
     return this.listingsService.findOneById(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Update a property listing',
+    description:
+      'Updates an existing property listing owned by the authenticated seller. ' +
+      'Only provided fields are updated. New images can be uploaded and existing images can be removed.',
+  })
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'id',
+    description: 'Unique identifier of the property listing',
+    example: '68bd123456789abcdef123456',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      allOf: [
+        {
+          $ref: getSchemaPath(UpdateListingDto),
+        },
+        {
+          type: 'object',
+          properties: {
+            images: {
+              type: 'array',
+              description: 'New images to add to the listing.',
+              items: {
+                type: 'string',
+                format: 'binary',
+              },
+            },
+          },
+        },
+      ],
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Listing updated successfully.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Invalid listing ID or validation failed for the provided fields.',
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'Authentication is required or the provided access token is invalid.',
+  })
+  @ApiForbiddenResponse({
+    description: 'Only users with the SELLER role can update listings.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'The listing was not found or does not belong to the authenticated seller.',
+  })
+  @UseInterceptors(FilesInterceptor('images', 10))
+  @UseGuards(AuthGuard, AuthRolesGuard)
+  @Roles(UserRole.SELLER)
+  update(
+    @Param('id') id: string,
+    @Body() updateListingDto: UpdateListingDto,
+    @Req() req: ReqWithUser,
+    @UploadedFiles(new ImageFilesPipe(false))
+    files?: Express.Multer.File[],
+  ) {
+    return this.listingsService.update(
+      id,
+      updateListingDto,
+      req.currentUser.id,
+      files,
+    );
   }
 }
