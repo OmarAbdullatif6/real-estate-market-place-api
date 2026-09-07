@@ -44,7 +44,7 @@ async function bootstrap() {
       },
       'access-token',
     )
-    .addTag('Users - Favorites')
+    .addTag('Users')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {

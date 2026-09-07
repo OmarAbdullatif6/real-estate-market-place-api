@@ -7,10 +7,10 @@ import { AuthGuard } from "../auth/guards/auth.guard";
 import type { PayloadType } from "../types/payload.type";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { FavoritesProvider } from './favorites.provider';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiUnauthorizedResponse, ApiNotFoundResponse, }
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiUnauthorizedResponse, ApiNotFoundResponse, ApiConsumes, ApiBody, }
     from '@nestjs/swagger';
 import { FileInterceptor } from "@nestjs/platform-express";
-@ApiTags('Users - Favorites')
+@ApiTags('Users')
 @ApiBearerAuth('access-token')
 @Controller("/users")
 export class UsersController {
@@ -95,12 +95,33 @@ export class UsersController {
     @Post('profile-image')
     @UseGuards(AuthGuard)
     @UseInterceptors(FileInterceptor('image'))
-    async uploadProfileImage(
+    @ApiOperation({
+        summary: 'Upload or update user profile image',
+    })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                image: {
+                    type: 'string',
+                    format: 'binary',
+                },
+            },
+            required: ['image'],
+        },
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile image uploaded successfully',
+    })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - valid JWT token is required',
+    })
+    public async uploadProfileImage(
         @CurrentUser() payload: PayloadType,
         @UploadedFile() file: Express.Multer.File,
     ) {
-        console.log(payload);
-        
         return this.usersService.uploadUserImage(payload.id, file);
     }
 }
