@@ -1,46 +1,45 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
 import { PayloadType } from '../../types/payload.type';
-import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../../types/userRole.type';
-import { UsersService } from '../../users/users.service';
+import { ReqWithUser } from '../../types/reqWithUser.type';
 
 @Injectable()
 export class AuthRolesGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
-    private readonly reflector:Reflector,
-    private readonly usersService: UsersService
+    private readonly reflector: Reflector,
   ) {}
   async canActivate(context: ExecutionContext) {
-    const roles:UserRole = this.reflector.getAllAndOverride('roles', [context.getHandler(), context.getClass()])
+    const roles: UserRole = this.reflector.getAllAndOverride('roles', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
-    if(!roles || roles.length === 0) return false;
-    const req: Request = context.switchToHttp().getRequest();
+    if (!roles || roles.length === 0) return false;
+    const req: ReqWithUser = context.switchToHttp().getRequest();
     const [type, token] = req.headers.authorization?.split(' ') ?? [];
     if (token && type === 'Bearer') {
       try {
-        const payload: PayloadType = await this.jwtService.verifyAsync(
-          token,
-          {
-            secret: this.config.get<string>('JWT_SECRET_KEY'),
-          },
-        );
-        const user = {role: "seller"} //dummy till usersService complete
+        const payload: PayloadType = await this.jwtService.verifyAsync(token);
+        const user = { role: 'seller' }; //dummy till usersService complete
         // const user = await this.usersService.getCurrentUser(payload.id)
-        if(!user) return false
+        if (!user) return false;
 
-        if(roles.includes(user.role)){
-            req["user"] = payload;
-            return true;
+        if (roles.includes(user.role)) {
+          req.currentUser = payload;
+          return true;
         }
       } catch (error) {
-        throw new UnauthorizedException("access denied, invalid token")
+        throw new UnauthorizedException('access denied, invalid token');
       }
-    } else throw new UnauthorizedException("access denied, no token provided")
+    } else throw new UnauthorizedException('access denied, no token provided');
 
     return false;
   }

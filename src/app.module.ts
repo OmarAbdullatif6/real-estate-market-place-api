@@ -8,9 +8,6 @@ import { AuthModule } from './auth/auth.module';
 import { ListingsModule } from './listings/listings.module';
 @Module({
   imports: [
-    UsersModule,
-    AuthModule,
-    DatabaseModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath:
@@ -18,6 +15,9 @@ import { ListingsModule } from './listings/listings.module';
           ? `.env.${process.env.NODE_ENV}`
           : '.env',
     }),
+    UsersModule,
+    AuthModule,
+    DatabaseModule,
     ListingsModule,
   ],
   controllers: [AppController],

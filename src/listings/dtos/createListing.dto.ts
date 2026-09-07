@@ -12,6 +12,22 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+class LocationDto {
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @IsNumber({}, { each: true })
+  coordinates: number[];
+
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
+  @IsString()
+  @IsNotEmpty()
+  city: string;
+}
+
 export class CreateListingDto {
   @IsString()
   @IsNotEmpty()
@@ -46,29 +62,10 @@ export class CreateListingDto {
 
   @IsArray()
   @IsString({ each: true })
-  images: string[];
-
-  @IsArray()
-  @IsString({ each: true })
   amenities: string[];
 
+  @IsNotEmpty()
   @ValidateNested()
   @Type(() => LocationDto)
   location: LocationDto;
-}
-
-class LocationDto {
-  @IsArray()
-  @ArrayMinSize(2)
-  @ArrayMaxSize(2)
-  @IsNumber({}, { each: true })
-  coordinates: number[];
-
-  @IsString()
-  @IsNotEmpty()
-  address: string;
-
-  @IsString()
-  @IsNotEmpty()
-  city: string;
 }

@@ -5,13 +5,13 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { FavoritesProvider } from './favorites.provider';
 import { AuthModule } from '../auth/auth.module';
-import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  exports: [MongooseModule],
+  // AuthRolesGuard is provided by AuthModule and injects UsersService.
+  // Export it so importing modules can resolve that dependency.
+  exports: [MongooseModule, UsersService],
 
   imports: [
-    JwtModule,
     forwardRef(() => AuthModule),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
