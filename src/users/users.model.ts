@@ -4,7 +4,27 @@ import { UserRole } from '../types/userRole.type';
 
 export type UserDocument = HydratedDocument<User>;
 
-@Schema({ timestamps: true })
+@Schema({
+  timestamps: true,
+  toJSON: {
+    transform: (_doc, ret: any) => {
+      delete ret.password;
+      delete ret.refreshTokenHash;
+      delete ret.resetPasswordToken;
+      delete ret.resetPasswordExpires;
+      return ret;
+    },
+  },
+  toObject: {
+    transform: (_doc, ret: any) => {
+      delete ret.password;
+      delete ret.refreshTokenHash;
+      delete ret.resetPasswordToken;
+      delete ret.resetPasswordExpires;
+      return ret;
+    },
+  },
+})
 export class User {
   @Prop({ required: true, trim: true })
   fullName: string;
@@ -12,11 +32,14 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ required: true, select: false })
-  password: string;
+  @Prop({ required: false, select: false })
+  password?: string;
 
-  @Prop({ required: false, trim: true, unique: true })
+  @Prop({ required: false, trim: true, unique: true, sparse: true })
   phoneNumber: string;
+
+  @Prop({ type: String, default: null, unique: true, sparse: true })
+  googleId?: string | null;
 
   @Prop({ type: String, enum: UserRole, default: UserRole.BUYER })
   role: UserRole;

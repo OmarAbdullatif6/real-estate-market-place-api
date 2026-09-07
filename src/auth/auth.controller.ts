@@ -17,6 +17,7 @@ import { RefreshTokenDto } from './dtos/refresh-token.dto';
 import { AuthGuard } from './guards/auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { PayloadType } from '../types/payload.type';
+import { GoogleAuthDto } from './dtos/google-auth.dto';
 
 @ApiTags('Auth')
 @Controller('/users/auth')
@@ -136,6 +137,39 @@ export class AuthController {
   })
   public logout(@CurrentUser() user: PayloadType) {
     return this.authService.logout(user.id);
+  }
+
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Authenticate / Sign in or Sign up with Google OAuth ID token',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Google authentication successful, returns user info and JWT tokens',
+    schema: {
+      example: {
+        user: {
+          id: '64e8b8f2d592670012345678',
+          _id: '64e8b8f2d592670012345678',
+          fullName: 'John Doe',
+          name: 'John Doe',
+          email: 'johndoe@gmail.com',
+          role: 'buyer',
+        },
+        accessToken: 'eyJhbGciOi...',
+        refreshToken: 'eyJhbGciOi...',
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Google account must have an email associated or invalid payload',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid or expired Google token',
+  })
+  async googleAuth(@Body() dto: GoogleAuthDto) {
+    return this.authService.googleAuth(dto.token);
   }
 }
 
