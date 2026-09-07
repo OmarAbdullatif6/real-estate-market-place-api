@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -19,6 +20,8 @@ import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
 import { OAuth2Client } from 'google-auth-library';
 import { UserRole } from '../types/userRole.type';
+import { VerifyOtpDto } from './dtos/verify-otp.dto';
+import { ResendOtpDto } from './dtos/resend-otp.dto';
 
 @Injectable()
 export class AuthService {
@@ -29,7 +32,9 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
   ) {
-    this.googleClient = new OAuth2Client(this.configService.get<string>("GOOGLE_CLIENT_ID"))
+    this.googleClient = new OAuth2Client(
+      this.configService.get<string>('GOOGLE_CLIENT_ID'),
+    );
   }
 
   public async googleAuth(idToken: string) {
@@ -44,43 +49,76 @@ export class AuthService {
       throw new UnauthorizedException('Invalid Google token');
     }
     if (!payload || !payload.email) {
-      throw new BadRequestException('Google account must have an email associated');
+      throw new BadRequestException(
+        'Google account must have an email associated',
+      );
     }
     const googleId = payload.sub;
-    const { email, name } = payload;
+    const { email, name, picture } = payload;
+    const normalizedEmail = email.toLowerCase().trim();
+
     let user = await this.userModel.findOne({
-      $or: [{ googleId }, { email }],
+      $or: [{ googleId }, { email: normalizedEmail }],
     });
     if (!user) {
       user = await this.userModel.create({
-        fullName: name || email.split('@')[0],
-        email,
+        fullName: name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
         googleId,
+        isVerified: true,
+        userImage: picture || null,
       });
-    } else if (!user.googleId) {
-      user.googleId = googleId;
-      await user.save();
+    } else {
+      let shouldSave = false;
+      if (!user.googleId) {
+        user.googleId = googleId;
+        shouldSave = true;
+      }
+      if (!user.isVerified) {
+        user.isVerified = true;
+        shouldSave = true;
+      }
+      if (!user.userImage && picture) {
+        user.userImage = picture;
+        shouldSave = true;
+      }
+      if (shouldSave) {
+        await user.save();
+      }
     }
-    const tokens = await this.generateTokens(user._id.toString(), user.email, user.role);
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.email,
+      user.role,
+    );
     await this.updateRefreshTokenHash(user._id.toString(), tokens.refreshToken);
     return {
-      user: this.sanitizeUser(user),
-      ...tokens,
+      user: this.formatAuthUser(user),
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     };
   }
 
   public async register(registerDto: RegisterDto) {
-    const { email, password } = registerDto;
+    const email = registerDto.email.trim().toLowerCase();
+    const { password } = registerDto;
     const existedUser = await this.userModel.findOne({ email });
     if (existedUser) throw new BadRequestException('email already exists');
 
     const hashedPassword = await this.hashPassword(password);
+    const otp = this.generateOtp();
+    const otpHash = this.hashOtp(otp);
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
     let newUser;
     try {
       newUser = await this.userModel.create({
         ...registerDto,
+        email,
         role: registerDto.userRole as unknown as UserRole,
         password: hashedPassword,
+        otpHash,
+        otpExpires,
       });
     } catch (error: any) {
       if (error.code === 11000) {
@@ -88,24 +126,87 @@ export class AuthService {
       }
       throw error;
     }
-    const { accessToken, refreshToken } = await this.generateTokens(
-      newUser._id.toString(),
-      newUser.email,
-      newUser.role,
-    );
-    await this.updateRefreshTokenHash(newUser._id.toString(), refreshToken);
+    await this.mailService.sendOtpEmail(newUser.email, newUser.fullName, otp);
 
     return {
-      user: this.sanitizeUser(newUser),
-      accessToken,
-      refreshToken,
+      message:
+        'Registration successful. Please check your email for the verification code.',
+      email: newUser.email,
     };
   }
 
-  public async login(loginDto: LoginDto) {
+  public async verifyOtp(dto: VerifyOtpDto) {
+    const email = dto.email.trim().toLowerCase();
+    const { otp } = dto;
+    const incomingOtpHash = this.hashOtp(otp);
+
     const user = await this.userModel
-      .findOne({ email: loginDto.email })
-      .select('+password');
+      .findOne({ email })
+      .select('+otpHash +otpExpires');
+
+    if (!user) {
+      throw new BadRequestException('Invalid email or verification code');
+    }
+
+    if (user.isVerified) {
+      return { message: 'Account is already verified. You can log in.' };
+    }
+
+    if (!user.otpExpires || user.otpExpires < new Date()) {
+      throw new BadRequestException(
+        'Verification code has expired. Please request a new one.',
+      );
+    }
+
+    if (user.otpHash !== incomingOtpHash) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    user.isVerified = true;
+    user.otpHash = null;
+    user.otpExpires = null;
+    await user.save();
+
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.email,
+      user.role,
+    );
+    await this.updateRefreshTokenHash(user._id.toString(), tokens.refreshToken);
+
+    return {
+      message: 'Email verified successfully',
+      user: this.formatAuthUser(user),
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
+  }
+
+  public async resendOtp(dto: ResendOtpDto) {
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.userModel.findOne({ email });
+
+    if (!user) {
+      return { message: 'If an account exists, a new code has been sent.' };
+    }
+
+    if (user.isVerified) {
+      throw new BadRequestException('This account is already verified.');
+    }
+
+    const otp = this.generateOtp();
+    user.otpHash = this.hashOtp(otp);
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    await this.mailService.sendOtpEmail(user.email, user.fullName, otp);
+
+    return { message: 'If an account exists, a new code has been sent.' };
+  }
+
+  public async login(loginDto: LoginDto) {
+    const email = loginDto.email.trim().toLowerCase();
+    const user = await this.userModel.findOne({ email }).select('+password');
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -118,17 +219,27 @@ export class AuthService {
     if (!isMatch) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    const { accessToken, refreshToken } = await this.generateTokens(
+
+    if (!user.isVerified) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        message:
+          'Your email is not verified. Please verify your account to continue.',
+        isVerified: false,
+      });
+    }
+
+    const tokens = await this.generateTokens(
       user._id.toString(),
       user.email,
       user.role,
     );
-    await this.updateRefreshTokenHash(user._id.toString(), refreshToken);
+    await this.updateRefreshTokenHash(user._id.toString(), tokens.refreshToken);
 
     return {
-      user: this.sanitizeUser(user),
-      accessToken,
-      refreshToken,
+      user: this.formatAuthUser(user),
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     };
   }
 
@@ -139,9 +250,12 @@ export class AuthService {
 
     let payload: { id: string };
     try {
-      payload = await this.jwtService.verifyAsync(refreshTokenDto.refreshToken, {
-        secret: refreshSecret,
-      });
+      payload = await this.jwtService.verifyAsync(
+        refreshTokenDto.refreshToken,
+        {
+          secret: refreshSecret,
+        },
+      );
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
@@ -186,7 +300,8 @@ export class AuthService {
 
     if (!user) {
       return {
-        message: 'If an account with that email exists, a reset link has been sent.',
+        message:
+          'If an account with that email exists, a reset link has been sent.',
       };
     }
 
@@ -199,24 +314,25 @@ export class AuthService {
 
     const expires = new Date(Date.now() + 15 * 60 * 1000);
 
-    await this.setResetPasswordToken(
-      user._id.toString(),
-      tokenHash,
-      expires,
-    );
+    await this.setResetPasswordToken(user._id.toString(), tokenHash, expires);
 
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL')?.replace(/\/$/, '') ||
       'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
 
-    await this.mailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl);
+    await this.mailService.sendPasswordResetEmail(
+      user.email,
+      user.fullName,
+      resetUrl,
+    );
 
     return {
-      message: 'If an account with that email exists, a reset link has been sent.',
+      message:
+        'If an account with that email exists, a reset link has been sent.',
     };
   }
- 
+
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const tokenHash = crypto
       .createHash('sha256')
@@ -228,12 +344,11 @@ export class AuthService {
       throw new BadRequestException('Reset token is invalid or has expired');
     }
 
-    const hashedPassword = await this.hashPassword(resetPasswordDto.newPassword);
-
-    await this.updatePasswordAndClearToken(
-      user._id.toString(),
-      hashedPassword,
+    const hashedPassword = await this.hashPassword(
+      resetPasswordDto.newPassword,
     );
+
+    await this.updatePasswordAndClearToken(user._id.toString(), hashedPassword);
 
     return { message: 'Password has been updated successfully' };
   }
@@ -253,7 +368,9 @@ export class AuthService {
     });
   }
 
-  private async findByValidResetToken(tokenHash: string): Promise<UserDocument | null> {
+  private async findByValidResetToken(
+    tokenHash: string,
+  ): Promise<UserDocument | null> {
     return this.userModel
       .findOne({
         resetPasswordToken: tokenHash,
@@ -274,21 +391,16 @@ export class AuthService {
     });
   }
 
-  private sanitizeUser(user: any) {
-    const raw = typeof user.toObject === 'function' ? user.toObject() : { ...user };
-    delete raw.password;
-    delete raw.refreshTokenHash;
-    delete raw.resetPasswordToken;
-    delete raw.resetPasswordExpires;
-    delete raw.__v;
-
-    if (raw._id && !raw.id) {
-      raw.id = raw._id.toString();
-    }
-    if (raw.fullName && !raw.name) {
-      raw.name = raw.fullName;
-    }
-    return raw;
+  private formatAuthUser(user: any) {
+    return {
+      id: user._id ? user._id.toString() : user.id,
+      name: user.fullName || user.name,
+      email: user.email,
+      role: user.role,
+      phoneNumber: user.phoneNumber ?? null,
+      userImage: user.userImage ?? null,
+      isVerified: user.isVerified ?? false,
+    };
   }
 
   private async hashPassword(password: string): Promise<string> {
@@ -338,5 +450,13 @@ export class AuthService {
     await this.userModel.findByIdAndUpdate(userId, {
       refreshTokenHash,
     });
+  }
+
+  private generateOtp(): string {
+    return crypto.randomInt(100000, 999999).toString();
+  }
+
+  private hashOtp(otp: string): string {
+    return crypto.createHash('sha256').update(otp).digest('hex');
   }
 }

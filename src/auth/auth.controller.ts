@@ -18,6 +18,10 @@ import { AuthGuard } from './guards/auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { PayloadType } from '../types/payload.type';
 import { GoogleAuthDto } from './dtos/google-auth.dto';
+import { VerifyOtpDto } from './dtos/verify-otp.dto';
+import { ResendOtpDto } from './dtos/resend-otp.dto';
+import { Throttle } from '@nestjs/throttler';
+import { OtpThrottlerGuard } from './guards/otp-throttler.guard';
 
 @ApiTags('Auth')
 @Controller('/users/auth')
@@ -28,7 +32,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'User registered successfully',
+    description: 'User registered successfully, verification code sent to email',
+    schema: {
+      example: {
+        message:
+          'Registration successful. Please check your email for the verification code.',
+        email: 'user@example.com',
+      },
+    },
   })
   @ApiBadRequestResponse({
     description: 'Validation failed or email already exists',
@@ -170,6 +181,59 @@ export class AuthController {
   })
   async googleAuth(@Body() dto: GoogleAuthDto) {
     return this.authService.googleAuth(dto.token);
+  }
+
+  @UseGuards(OtpThrottlerGuard)
+  @Throttle({ strict: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @Post('verify-otp')
+  @ApiOperation({ summary: 'Verify account email with a 6-digit OTP' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Email verified successfully, returns user info and JWT tokens',
+    schema: {
+      example: {
+        message: 'Email verified successfully',
+        user: {
+          id: '64e8b8f2d592670012345678',
+          name: 'John Doe',
+          email: 'user@example.com',
+          role: 'buyer',
+          phoneNumber: '01234567891',
+          userImage: null,
+          isVerified: true,
+        },
+        accessToken: 'eyJhbGciOi...',
+        refreshToken: 'eyJhbGciOi...',
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid verification code or code has expired',
+  })
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @UseGuards(OtpThrottlerGuard)
+  @Throttle({ strict: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @Post('resend-otp')
+  @ApiOperation({ summary: 'Resend verification OTP email' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'If an account exists and is unverified, a new code has been sent.',
+    schema: {
+      example: {
+        message: 'If an account exists, a new code has been sent.',
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Account is already verified or validation failed',
+  })
+  resendOtp(@Body() dto: ResendOtpDto) {
+    return this.authService.resendOtp(dto);
   }
 }
 
