@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   HttpStatus,
   HttpCode,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -24,7 +25,6 @@ import {
   ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
-  getSchemaPath,
 } from '@nestjs/swagger';
 
 import { CreateListingDto } from './dtos/createListing.dto';
@@ -39,6 +39,8 @@ import { ImageFilesPipe } from '../pipes/image-files.pipe';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Multer } from 'multer';
+import { UpdateListingDto } from './dtos/updateListing.dto';
+import { ListingType, PropertyType } from './listings.model';
 
 @ApiTags('Listings')
 @Controller('listings')
@@ -59,25 +61,127 @@ export class ListingsController {
   @ApiBody({
     description: 'Property listing data and optional property images.',
     schema: {
-      allOf: [
-        {
-          $ref: getSchemaPath(CreateListingDto),
-        },
-        {
-          type: 'object',
-          properties: {
-            images: {
-              type: 'array',
-              items: {
-                type: 'string',
-                format: 'binary',
-              },
-              maxItems: 10,
-              description: 'Optional property images. Maximum 10 images.',
-            },
-          },
-        },
+      type: 'object',
+
+      // All DTO fields are required.
+      required: [
+        'title',
+        'description',
+        'price',
+        'listingType',
+        'propertyType',
+        'areaSqMeters',
+        'bedrooms',
+        'bathrooms',
+        'amenities',
+        'coordinates',
+        'address',
+        'city',
       ],
+
+      properties: {
+        title: {
+          type: 'string',
+          minLength: 2,
+          maxLength: 100,
+          example: 'Modern 3-Bedroom Apartment',
+          description: 'Title of the property listing.',
+        },
+
+        description: {
+          type: 'string',
+          minLength: 10,
+          maxLength: 1000,
+          example:
+            'Spacious 3-bedroom apartment located in a prime residential area.',
+          description: 'Detailed description of the property.',
+        },
+
+        price: {
+          type: 'number',
+          minimum: 0,
+          example: 2500000,
+          description: 'Price of the property.',
+        },
+
+        listingType: {
+          type: 'string',
+          enum: Object.values(ListingType),
+          example: ListingType.SALE,
+          description: 'Whether the property is available for sale or rent.',
+        },
+
+        propertyType: {
+          type: 'string',
+          enum: Object.values(PropertyType),
+          example: PropertyType.APARTMENT,
+          description: 'Type of the property.',
+        },
+
+        areaSqMeters: {
+          type: 'number',
+          minimum: 1,
+          example: 150,
+          description: 'Property area in square meters.',
+        },
+
+        bedrooms: {
+          type: 'number',
+          minimum: 0,
+          example: 3,
+          description: 'Number of bedrooms.',
+        },
+
+        bathrooms: {
+          type: 'number',
+          minimum: 1,
+          example: 2,
+          description: 'Number of bathrooms.',
+        },
+
+        amenities: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          example: ['Parking', 'Swimming Pool', 'Security'],
+          description: 'List of amenities available at the property.',
+        },
+
+        coordinates: {
+          type: 'array',
+          items: {
+            type: 'number',
+          },
+          minItems: 2,
+          maxItems: 2,
+          example: [31.2357, 30.0444],
+          description:
+            'Geographical coordinates in [longitude, latitude] format.',
+        },
+
+        address: {
+          type: 'string',
+          example: '15 El Tahrir Street',
+          description: 'Full address of the property.',
+        },
+
+        city: {
+          type: 'string',
+          example: 'Cairo',
+          description: 'City where the property is located.',
+        },
+
+        images: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          maxItems: 10,
+          description: 'Optional property images. Maximum 10 images.',
+        },
+      },
     },
   })
   @ApiCreatedResponse({
@@ -215,5 +319,140 @@ export class ListingsController {
   })
   findOne(@Param('id') id: string) {
     return this.listingsService.findOneById(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Update a property listing',
+    description:
+      'Updates an existing property listing owned by the authenticated seller. ' +
+      'Only provided fields are updated. New images can be uploaded and existing images can be removed.',
+  })
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'id',
+    description: 'Unique identifier of the property listing',
+    example: '68bd123456789abcdef123456',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          example: 'Modern 3-Bedroom Apartment',
+        },
+        description: {
+          type: 'string',
+          example:
+            'Spacious 3-bedroom apartment located in a prime residential area.',
+        },
+        price: {
+          type: 'number',
+          example: 220000,
+        },
+        listingType: {
+          type: 'string',
+          enum: Object.values(ListingType),
+          example: ListingType.SALE,
+        },
+        propertyType: {
+          type: 'string',
+          enum: Object.values(PropertyType),
+          example: PropertyType.APARTMENT,
+        },
+        areaSqMeters: {
+          type: 'number',
+          example: 120,
+        },
+        bedrooms: {
+          type: 'number',
+          example: 3,
+        },
+        bathrooms: {
+          type: 'number',
+          example: 2,
+        },
+        amenities: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          example: ['Parking', 'Security'],
+        },
+        coordinates: {
+          type: 'array',
+          items: {
+            type: 'number',
+          },
+          minItems: 2,
+          maxItems: 2,
+          example: [31.2357, 30.0444],
+        },
+        address: {
+          type: 'string',
+          example: '15 El Tahrir Street',
+        },
+        city: {
+          type: 'string',
+          example: 'Cairo',
+        },
+        removedImages: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'URLs of existing images to remove.',
+          example: [
+            'https://res.cloudinary.com/example/image/upload/apartment-1.jpg',
+          ],
+        },
+        images: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'New images to add to the listing.',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Listing updated successfully.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Invalid listing ID or validation failed for the provided fields.',
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'Authentication is required or the provided access token is invalid.',
+  })
+  @ApiForbiddenResponse({
+    description: 'Only users with the SELLER role can update listings.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'The listing was not found or does not belong to the authenticated seller.',
+  })
+  @UseInterceptors(FilesInterceptor('images', 10))
+  @UseGuards(AuthGuard, AuthRolesGuard)
+  @Roles(UserRole.SELLER)
+  update(
+    @Param('id') id: string,
+    @Body() updateListingDto: UpdateListingDto,
+    @Req() req: ReqWithUser,
+    @UploadedFiles(new ImageFilesPipe(false))
+    files?: Express.Multer.File[],
+  ) {
+    return this.listingsService.update(
+      id,
+      updateListingDto,
+      req.currentUser.id,
+      files,
+    );
   }
 }

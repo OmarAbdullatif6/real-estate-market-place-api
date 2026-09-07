@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { ListingsModule } from './listings/listings.module';
 import { AdminsModule } from './admins/admins.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -17,6 +19,18 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
           ? `.env.${process.env.NODE_ENV}`
           : '.env',
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: 20,
+      },
+      {
+        name: 'strict',
+        ttl: 60000,
+        limit: 5,
+      },
+    ]),
     UsersModule,
     AuthModule,
     DatabaseModule,
@@ -25,6 +39,12 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     AdminsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -9,7 +9,7 @@ interface UploadOptions {
   eager?: any;
 }
 
-interface CloudinaryDeleteResult {
+export interface CloudinaryDeleteResult {
   result: 'ok' | 'not found';
   [key: string]: unknown;
 }

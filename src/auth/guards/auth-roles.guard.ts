@@ -28,7 +28,7 @@ export class AuthRolesGuard implements CanActivate {
     if (token && type === 'Bearer') {
       try {
         const payload: PayloadType = await this.jwtService.verifyAsync(token);
-        const user = { role: 'admin' }; //dummy till usersService complete
+        const user = req.currentUser;
         // const user = await this.usersService.getCurrentUser(payload.id)
         if (!user) return false;
 

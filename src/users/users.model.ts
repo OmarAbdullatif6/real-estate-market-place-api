@@ -12,6 +12,8 @@ export type UserDocument = HydratedDocument<User>;
       delete ret.refreshTokenHash;
       delete ret.resetPasswordToken;
       delete ret.resetPasswordExpires;
+      delete ret.otpHash;
+      delete ret.otpExpires;
       return ret;
     },
   },
@@ -21,6 +23,8 @@ export type UserDocument = HydratedDocument<User>;
       delete ret.refreshTokenHash;
       delete ret.resetPasswordToken;
       delete ret.resetPasswordExpires;
+      delete ret.otpHash;
+      delete ret.otpExpires;
       return ret;
     },
   },
@@ -35,6 +39,15 @@ export class User {
   @Prop({ required: false, select: false })
   password?: string;
 
+  @Prop({ default: false })
+  isVerified: boolean;
+
+  @Prop({ type: String, default: null, select: false })
+  otpHash?: string | null;
+
+  @Prop({ type: Date, default: null, select: false })
+  otpExpires?: Date | null;
+  
   @Prop({ required: false, trim: true, unique: true, sparse: true })
   phoneNumber: string;
 
