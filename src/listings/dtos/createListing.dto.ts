@@ -8,25 +8,8 @@ import {
   IsArray,
   ArrayMinSize,
   ArrayMaxSize,
-  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-
-class LocationDto {
-  @IsArray()
-  @ArrayMinSize(2)
-  @ArrayMaxSize(2)
-  @IsNumber({}, { each: true })
-  coordinates: number[];
-
-  @IsString()
-  @IsNotEmpty()
-  address: string;
-
-  @IsString()
-  @IsNotEmpty()
-  city: string;
-}
+import { Transform, Type } from 'class-transformer';
 
 export class CreateListingDto {
   @IsString()
@@ -60,12 +43,30 @@ export class CreateListingDto {
   @IsNumber()
   bathrooms: number;
 
+  @Transform(({ value }) =>
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    typeof value === 'string' ? JSON.parse(value) : value,
+  )
   @IsArray()
   @IsString({ each: true })
   amenities: string[];
 
+  // Location
+  @Transform(({ value }) =>
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    typeof value === 'string' ? JSON.parse(value) : value,
+  )
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @IsNumber({}, { each: true })
+  coordinates: number[];
+
+  @IsString()
   @IsNotEmpty()
-  @ValidateNested()
-  @Type(() => LocationDto)
-  location: LocationDto;
+  address: string;
+
+  @IsString()
+  @IsNotEmpty()
+  city: string;
 }

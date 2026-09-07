@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ListingSchema } from './listings.model';
 import { Listing } from './listings.model';
 import { AuthModule } from '../auth/auth.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuthModule } from '../auth/auth.module';
         schema: ListingSchema,
       },
     ]),
+    CloudinaryModule,
   ],
   providers: [ListingsService],
   controllers: [ListingsController],
