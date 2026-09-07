@@ -18,12 +18,7 @@ export class PaginationQueryDto {
   @Max(50)
   limit?: number = 10;
 
-  @ApiPropertyOptional({ enum: ['pending', 'approved', 'rejected'] })
-  @IsOptional()
-  @IsString()
-  status?: string;
-
-  @ApiPropertyOptional({ description: 'Search by title' })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   search?: string;
