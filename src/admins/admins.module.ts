@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { AuthModule } from '../auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AdminsService } from './admins.service';
 import { AdminsController } from './admins.controller';
@@ -14,7 +14,7 @@ import { Listing, ListingSchema } from '../listings/listings.model';
   imports: [
     UsersModule,
     ListingsModule,
-    JwtModule,
+    AuthModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Listing.name, schema: ListingSchema },
