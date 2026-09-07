@@ -8,6 +8,7 @@ import { AuthModule } from '../auth/auth.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
+  exports:[ListingsService],
   imports: [
     AuthModule,
     MongooseModule.forFeature([

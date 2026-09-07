@@ -1,7 +1,7 @@
-import { Controller, Delete, Get, Param, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { InjectModel, ParseObjectIdPipe } from "@nestjs/mongoose";
 import { User } from "./users.model";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 import { UsersService } from './users.service';
 import { AuthGuard } from "../auth/guards/auth.guard";
 import type { PayloadType } from "../types/payload.type";
@@ -51,8 +51,8 @@ export class UsersController {
     @ApiNotFoundResponse({
         description: 'Listing not found in favorites',
     })
-    public getById(@CurrentUser() payload: PayloadType, @Param('id', ParseObjectIdPipe) listingId: string) {
-        return this.favoritesProvider.getOneBy(payload.id, listingId);
+    public getById(@CurrentUser() payload: PayloadType, @Param('id',ParseObjectIdPipe) listingId: Types.ObjectId) {
+        return this.favoritesProvider.getOneBy(payload.id, listingId.toString());
     }
 
     @Delete('favorites/clear')
@@ -73,23 +73,29 @@ export class UsersController {
 
 
 
-    @Delete('favorites/:id')
+    @Patch('favorites/:id')
     @UseGuards(AuthGuard)
     @ApiOperation({
-        summary: 'Remove a listing from favorites',
+        summary: 'Toggle a listing in favorites',
+        description:
+            'Adds the listing to favorites if it is not already there, or removes it if it is already in favorites.',
     })
     @ApiResponse({
         status: 200,
-        description: 'Favorite removed successfully',
+        description: 'Listing favorite status toggled successfully',
     })
     @ApiUnauthorizedResponse({
         description: 'Unauthorized - valid JWT token is required',
     })
     @ApiNotFoundResponse({
-        description: 'Listing not found in favorites',
+        description:
+            'Listing not found, not approved, or the listing is not in favorites when removing',
     })
-    public removeListingFromFavorites(@CurrentUser() payload: PayloadType, @Param('id', ParseObjectIdPipe) listingId: string) {
-        return this.favoritesProvider.remove(payload.id, listingId);
+    public toggleListingFromFavorites(
+        @CurrentUser() payload: PayloadType,
+        @Param('id', ParseObjectIdPipe) listingId: Types.ObjectId,
+    ) {
+        return this.favoritesProvider.toggle(payload.id, listingId.toString());
     }
 
     @Post('profile-image')
