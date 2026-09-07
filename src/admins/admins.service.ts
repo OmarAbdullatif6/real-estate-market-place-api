@@ -8,7 +8,8 @@ import {
   ListingStatus,
 } from '../listings/listings.model';
 import { UserRole } from '../types/userRole.type';
-import { PaginationQueryDto } from './dtos/pagination-query.dto';
+import { ListingsQueryDto } from './dtos/listings-query.dto';
+import { UsersQueryDto } from './dtos/users-query.dto';
 
 @Injectable()
 export class AdminsService {
@@ -93,7 +94,7 @@ export class AdminsService {
   }
 
   //Listings
-  async getAllListings(query: PaginationQueryDto) {
+  async getAllListings(query: ListingsQueryDto) {
     const { page = 1, limit = 10, status, search } = query;
     const skip = (page - 1) * limit;
 
@@ -217,4 +218,66 @@ export class AdminsService {
   }
 
   //Users
+  async getUsers(query: UsersQueryDto) {
+    const { page = 1, limit = 10, search, role } = query;
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, unknown> = { role: { $ne: UserRole.ADMIN } };
+
+    if (role) {
+      filter.role = role;
+    }
+
+    if (search) {
+      filter.$or = [
+        { fullName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phoneNumber: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.userModel
+        .find(filter)
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      this.userModel.countDocuments(filter),
+    ]);
+
+    return {
+      message: 'Users retrieved successfully',
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getUserById(id: string) {
+    const user = await this.userModel.findById(id).select('-password');
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      message: 'User retrieved successfully',
+      data: user,
+    };
+  }
+
+  async deleteUser(id: string) {
+    const user = await this.userModel.findByIdAndDelete(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      message: 'User deleted successfully',
+    };
+  }
 }

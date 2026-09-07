@@ -24,7 +24,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../types/userRole.type';
 import type { PayloadType } from '../types/payload.type';
 import { ParseObjectIdPipe } from '../pipes/validateId.pipe';
-import { PaginationQueryDto } from './dtos/pagination-query.dto';
+import { ListingsQueryDto } from './dtos/listings-query.dto';
+import { UsersQueryDto } from './dtos/users-query.dto';
 import { RejectListingDto } from './dtos/reject-listing.dto';
 
 @ApiBearerAuth('access-token')
@@ -63,7 +64,7 @@ export class AdminsController {
   @ApiUnauthorizedResponse({
     description: 'Unauthorized - admin role required',
   })
-  getAllListings(@Query() query: PaginationQueryDto) {
+  getAllListings(@Query() query: ListingsQueryDto) {
     return this.adminsService.getAllListings(query);
   }
 
@@ -120,5 +121,40 @@ export class AdminsController {
   })
   removeListing(@Param('id', ParseObjectIdPipe) id: string) {
     return this.adminsService.removeListing(id);
+  }
+
+  @Get('users')
+  @ApiTags('Admin - Users')
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - admin role required',
+  })
+  getUsers(@Query() query: UsersQueryDto) {
+    return this.adminsService.getUsers(query);
+  }
+
+  @Get('users/:id')
+  @ApiTags('Admin - Users')
+  @ApiOperation({ summary: 'Get a user by ID' })
+  @ApiResponse({ status: 200, description: 'User retrieved successfully' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - admin role required',
+  })
+  getUserById(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.adminsService.getUserById(id);
+  }
+
+  @Delete('users/:id')
+  @ApiTags('Admin - Users')
+  @ApiOperation({ summary: 'Delete a user' })
+  @ApiResponse({ status: 200, description: 'User deleted successfully' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - admin role required',
+  })
+  deleteUser(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.adminsService.deleteUser(id);
   }
 }
