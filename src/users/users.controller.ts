@@ -1,24 +1,181 @@
-import { Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
-import { InjectModel, ParseObjectIdPipe } from "@nestjs/mongoose";
-import { User } from "./users.model";
-import { Model, Types } from "mongoose";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+    UploadedFile,
+    UseGuards,
+    UseInterceptors,
+} from '@nestjs/common';
+import { Types } from 'mongoose';
+
 import { UsersService } from './users.service';
-import { AuthGuard } from "../auth/guards/auth.guard";
-import type { PayloadType } from "../types/payload.type";
-import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { AuthGuard } from '../auth/guards/auth.guard';
+import type { PayloadType } from '../types/payload.type';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { FavoritesProvider } from './favorites.provider';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiUnauthorizedResponse, ApiNotFoundResponse, ApiConsumes, ApiBody, }
-    from '@nestjs/swagger';
-import { FileInterceptor } from "@nestjs/platform-express";
+import { UpdateUserDto } from './dtos/update-user.dto';
+
+import {
+    ApiBearerAuth,
+    ApiOperation,
+    ApiResponse,
+    ApiTags,
+    ApiUnauthorizedResponse,
+    ApiNotFoundResponse,
+    ApiConsumes,
+    ApiBody,
+} from '@nestjs/swagger';
+
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ParseObjectIdPipe } from '@nestjs/mongoose';
+
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
-@Controller("/users")
+@Controller('/users')
 export class UsersController {
     constructor(
-        @InjectModel(User.name) private readonly usersModel: Model<User>,
         private readonly usersService: UsersService,
-        private readonly favoritesProvider: FavoritesProvider
-    ) { }
+        private readonly favoritesProvider: FavoritesProvider,
+    ) {}
+
+    // ==================== Profile ====================
+
+    @Get('profile')
+    @UseGuards(AuthGuard)
+    @ApiOperation({
+        summary: 'Get current user profile',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'User profile retrieved successfully',
+    })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - valid JWT token is required',
+    })
+    public getMyProfile(
+        @CurrentUser() payload: PayloadType,
+    ) {
+        return this.usersService.getMyProfile(payload.id);
+    }
+
+    @Patch('profile')
+    @UseGuards(AuthGuard)
+    @ApiOperation({
+        summary: 'Update current user profile',
+        description: 'Updates the full name and phone number of the current user.',
+    })
+    @ApiBody({
+        type: UpdateUserDto,
+        examples: {
+            updateProfile: {
+                summary: 'Update profile example',
+                value: {
+                    fullName: 'John Doe',
+                    phoneNumber: '01234567891',
+                },
+            },
+        },
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'User profile updated successfully',
+    })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - valid JWT token is required',
+    })
+    public updateMyProfile(
+        @CurrentUser() payload: PayloadType,
+        @Body() data: UpdateUserDto,
+    ) {
+        return this.usersService.updateMyProfile(payload.id, data);
+    }
+
+    // ==================== Profile Image ====================
+
+    @Post('profile-image')
+    @UseGuards(AuthGuard)
+    @UseInterceptors(FileInterceptor('image'))
+    @ApiOperation({
+        summary: 'Upload or update user profile image',
+    })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                image: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'User profile image',
+                },
+            },
+            required: ['image'],
+        },
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile image uploaded successfully',
+    })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - valid JWT token is required',
+    })
+    public async uploadProfileImage(
+        @CurrentUser() payload: PayloadType,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        return this.usersService.uploadUserImage(payload.id, file);
+    }
+
+    @Delete('profile-image')
+    @UseGuards(AuthGuard)
+    @ApiOperation({
+        summary: 'Delete current user profile image',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile image deleted successfully',
+        schema: {
+            example: {
+                message: 'Image deleted successfully',
+            },
+        },
+    })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - valid JWT token is required',
+    })
+    public async deleteProfileImage(
+        @CurrentUser() payload: PayloadType,
+    ) {
+        return this.usersService.deleteUserImage(payload.id);
+    }
+
+    // ==================== Profile Views ====================
+
+    @Patch('profile/increment-views/:id')
+    @ApiOperation({
+        summary: 'Increment profile viewers count for any user',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile viewers count incremented successfully',
+        schema: {
+            example: {
+                count: 15,
+            },
+        },
+    })
+    public async incrementViewers(
+        @Param('id') id:string
+    ) {
+        return this.usersService.incrementViewers(id);
+    }
+
+    // ==================== Favorites ====================
+
     @Get('favorites')
     @UseGuards(AuthGuard)
     @ApiOperation({
@@ -31,10 +188,11 @@ export class UsersController {
     @ApiUnauthorizedResponse({
         description: 'Unauthorized - valid JWT token is required',
     })
-    public getUserFavorites(@CurrentUser() payload: PayloadType) {
-        return this.favoritesProvider.getAll(payload.id)
+    public getUserFavorites(
+        @CurrentUser() payload: PayloadType,
+    ) {
+        return this.favoritesProvider.getAll(payload.id);
     }
-
 
     @Get('favorites/:id')
     @UseGuards(AuthGuard)
@@ -51,8 +209,14 @@ export class UsersController {
     @ApiNotFoundResponse({
         description: 'Listing not found in favorites',
     })
-    public getById(@CurrentUser() payload: PayloadType, @Param('id',ParseObjectIdPipe) listingId: Types.ObjectId) {
-        return this.favoritesProvider.getOneBy(payload.id, listingId.toString());
+    public getById(
+        @CurrentUser() payload: PayloadType,
+        @Param('id', ParseObjectIdPipe) listingId: Types.ObjectId,
+    ) {
+        return this.favoritesProvider.getOneBy(
+            payload.id,
+            listingId.toString(),
+        );
     }
 
     @Delete('favorites/clear')
@@ -67,11 +231,11 @@ export class UsersController {
     @ApiUnauthorizedResponse({
         description: 'Unauthorized - valid JWT token is required',
     })
-    public clearUserFavorites(@CurrentUser() payload: PayloadType) {
-        return this.favoritesProvider.clear(payload.id)
+    public clearUserFavorites(
+        @CurrentUser() payload: PayloadType,
+    ) {
+        return this.favoritesProvider.clear(payload.id);
     }
-
-
 
     @Patch('favorites/:id')
     @UseGuards(AuthGuard)
@@ -95,39 +259,9 @@ export class UsersController {
         @CurrentUser() payload: PayloadType,
         @Param('id', ParseObjectIdPipe) listingId: Types.ObjectId,
     ) {
-        return this.favoritesProvider.toggle(payload.id, listingId.toString());
-    }
-
-    @Post('profile-image')
-    @UseGuards(AuthGuard)
-    @UseInterceptors(FileInterceptor('image'))
-    @ApiOperation({
-        summary: 'Upload or update user profile image',
-    })
-    @ApiConsumes('multipart/form-data')
-    @ApiBody({
-        schema: {
-            type: 'object',
-            properties: {
-                image: {
-                    type: 'string',
-                    format: 'binary',
-                },
-            },
-            required: ['image'],
-        },
-    })
-    @ApiResponse({
-        status: 200,
-        description: 'Profile image uploaded successfully',
-    })
-    @ApiUnauthorizedResponse({
-        description: 'Unauthorized - valid JWT token is required',
-    })
-    public async uploadProfileImage(
-        @CurrentUser() payload: PayloadType,
-        @UploadedFile() file: Express.Multer.File,
-    ) {
-        return this.usersService.uploadUserImage(payload.id, file);
+        return this.favoritesProvider.toggle(
+            payload.id,
+            listingId.toString(),
+        );
     }
 }

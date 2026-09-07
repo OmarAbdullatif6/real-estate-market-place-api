@@ -47,7 +47,7 @@ export class User {
 
   @Prop({ type: Date, default: null, select: false })
   otpExpires?: Date | null;
-  
+
   @Prop({ required: false, trim: true, unique: true, sparse: true })
   phoneNumber: string;
 
@@ -65,6 +65,10 @@ export class User {
 
   @Prop({ type: String, default: null })
   userImage?: string | null;
+
+  @Prop({ type: Number, default: 0 })
+  viewersCount?: number;
+
 
   @Prop({ type: String, default: null })
   resetPasswordToken?: string | null;
