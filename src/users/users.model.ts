@@ -26,6 +26,15 @@ export class User {
     default: [],
   })
   favorites: Types.ObjectId[];
+
+  @Prop({ type: String, default: null })
+  resetPasswordToken?: string | null;
+
+  @Prop({ type: Date, default: null })
+  resetPasswordExpires?: Date | null;
+
+  @Prop({ type: String, default: null, select: false })
+  refreshTokenHash?: string | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

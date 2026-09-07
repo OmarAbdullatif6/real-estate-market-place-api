@@ -6,6 +6,7 @@ import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ListingsModule } from './listings/listings.module';
+import { AdminsModule } from './admins/admins.module';
 @Module({
   imports: [
     ConfigModule.forRoot({

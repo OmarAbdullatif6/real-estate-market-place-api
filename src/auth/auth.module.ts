@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
+import { MailModule } from '../mail/mail.module';
 import { AuthRolesGuard } from './guards/auth-roles.guard';
 import { AuthGuard } from './guards/auth.guard';
 import type { StringValue } from 'ms';
@@ -13,7 +14,7 @@ import type { StringValue } from 'ms';
   providers: [AuthService, AuthGuard, AuthRolesGuard],
   imports: [
     forwardRef(() => UsersModule),
-
+    MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
