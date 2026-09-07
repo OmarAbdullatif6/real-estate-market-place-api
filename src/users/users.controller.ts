@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, UseGuards } from "@nestjs/common";
+import { Controller, Delete, Get, Param, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { InjectModel, ParseObjectIdPipe } from "@nestjs/mongoose";
 import { User } from "./users.model";
 import { Model } from "mongoose";
@@ -9,6 +9,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { FavoritesProvider } from './favorites.provider';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiUnauthorizedResponse, ApiNotFoundResponse, }
     from '@nestjs/swagger';
+import { FileInterceptor } from "@nestjs/platform-express";
 @ApiTags('Users - Favorites')
 @ApiBearerAuth('access-token')
 @Controller("/users")
@@ -71,7 +72,7 @@ export class UsersController {
     }
 
 
-    
+
     @Delete('favorites/:id')
     @UseGuards(AuthGuard)
     @ApiOperation({
@@ -89,5 +90,17 @@ export class UsersController {
     })
     public removeListingFromFavorites(@CurrentUser() payload: PayloadType, @Param('id', ParseObjectIdPipe) listingId: string) {
         return this.favoritesProvider.remove(payload.id, listingId);
+    }
+
+    @Post('profile-image')
+    @UseGuards(AuthGuard)
+    @UseInterceptors(FileInterceptor('image'))
+    async uploadProfileImage(
+        @CurrentUser() payload: PayloadType,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        console.log(payload);
+        
+        return this.usersService.uploadUserImage(payload.id, file);
     }
 }

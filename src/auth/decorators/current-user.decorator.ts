@@ -4,7 +4,7 @@ import { PayloadType } from '../../types/payload.type';
 export const CurrentUser = createParamDecorator(
   (_data, context: ExecutionContext) => {
     const req = context.switchToHttp().getRequest();
-    const payload: PayloadType = req['user'];
+    const payload: PayloadType = req['currentUser'];
     return payload;
   },
 );
