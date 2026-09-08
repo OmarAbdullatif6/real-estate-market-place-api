@@ -12,12 +12,12 @@ import { RequestsModule } from './request/requests.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors();
   app.use(
     helmet({
       contentSecurityPolicy: false,
     }),
   );
-  app.enableCors();
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
