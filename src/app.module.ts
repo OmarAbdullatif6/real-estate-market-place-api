@@ -10,6 +10,7 @@ import { AdminsModule } from './admins/admins.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { RequestModule } from './request/request.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,6 +38,7 @@ import { APP_GUARD } from '@nestjs/core';
     ListingsModule,
     CloudinaryModule,
     AdminsModule,
+    RequestModule,
   ],
   controllers: [AppController],
   providers: [
