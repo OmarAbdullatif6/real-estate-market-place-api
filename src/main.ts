@@ -13,7 +13,7 @@ import { RequestsModule } from './request/requests.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -54,7 +54,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    include: [AuthModule, UsersModule, AdminsModule, RequestsModule,],
+    include: [AuthModule, UsersModule, AdminsModule, RequestsModule],
     autoTagControllers: false,
   });
   const SWAGGER_CDN =
