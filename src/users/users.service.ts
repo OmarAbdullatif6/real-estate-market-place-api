@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { User } from "./users.model";
 import { Model } from "mongoose";
 import { InjectModel } from "@nestjs/mongoose";
@@ -28,7 +28,7 @@ export class UsersService {
         if (user.userImage) {
             await this.cloudinaryService.deleteFileAuto(user.userImage);
         }
-        if (!file) throw new NotFoundException("Image is required")
+        if (!file) throw new BadRequestException("Image is required")
         try {
 
             const uploadedImage = await this.cloudinaryService.uploadImage(file, 'real-estate/users',);
@@ -41,7 +41,7 @@ export class UsersService {
 
         } catch (error) {
             console.error('Error uploading profile image to Cloudinary:', error);
-            throw new Error('Failed to upload image. Please try again later.');
+            throw new InternalServerErrorException('Failed to upload image. Please try again later.');
         }
     }
 
