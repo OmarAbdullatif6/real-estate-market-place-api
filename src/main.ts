@@ -12,7 +12,12 @@ import { RequestsModule } from './request/requests.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.enableCors({
+    origin: ['http://localhost:5173'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
   app.use(
     helmet({
       contentSecurityPolicy: false,
