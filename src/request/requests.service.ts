@@ -1,13 +1,13 @@
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { Model } from "mongoose";
-import { ListingRequeust, RequestStatus } from "./requests.model";
+import { ListingRequest, RequestStatus } from "./requests.model";
 import { InjectModel } from "@nestjs/mongoose";
 import { CloudinaryService } from "../cloudinary/cloudinary.service";
 
 @Injectable()
 export class RequestsService {
     constructor(
-        @InjectModel(ListingRequeust.name) private readonly requestModel: Model<ListingRequeust>,
+        @InjectModel(ListingRequest.name) private readonly requestModel: Model<ListingRequest>,
         private readonly cloudinaryService: CloudinaryService,
     ) { }
     public async create(

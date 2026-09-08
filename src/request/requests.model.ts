@@ -8,7 +8,7 @@ export enum RequestStatus {
     REJECTED = 'rejected',
 }
 @Schema({ timestamps: true })
-export class ListingRequeust {
+export class ListingRequest {
     @Prop({
         type: MongooseSchema.Types.ObjectId,
         ref: User.name,
@@ -37,7 +37,7 @@ export class ListingRequeust {
     })
     identityDocument: string;
 }
-const ListingRequestSchema = SchemaFactory.createForClass(ListingRequeust);
+export const ListingRequestSchema = SchemaFactory.createForClass(ListingRequest);
 ListingRequestSchema.index({
     status: 1,
     createdAt: 1,
