@@ -11,6 +11,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { CreateListingDto } from './dtos/createListing.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UpdateListingDto } from './dtos/updateListing.dto';
+import { SearchListingDto } from './dtos/SearchListing.dto';
+
 @Injectable()
 export class ListingsService {
   constructor(
@@ -163,5 +165,94 @@ export class ListingsService {
     }
 
     return listing.save();
+  }
+
+  async searchListings(searchDto: SearchListingDto) {
+    const {
+      city,
+      listingType,
+      propertyType,
+      minPrice,
+      maxPrice,
+      minAreaSqMeters,
+      maxAreaSqMeters,
+      bedrooms,
+      bathrooms,
+      latitude,
+      longitude,
+      radiusKm,
+    } = searchDto;
+
+    const filter: Record<string, any> = {
+      status: ListingStatus.APPROVED,
+      isAvailable: true,
+    };
+
+    if (city) {
+      filter['location.city'] = {
+        $regex: city,
+        $options: 'i',
+      };
+    }
+
+    if (listingType) {
+      filter.listingType = listingType;
+    }
+
+    if (propertyType) {
+      filter.propertyType = propertyType;
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      filter.price = {};
+
+      if (minPrice !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        filter.price.$gte = minPrice;
+      }
+
+      if (maxPrice !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        filter.price.$lte = maxPrice;
+      }
+    }
+
+    if (minAreaSqMeters !== undefined || maxAreaSqMeters !== undefined) {
+      filter.areaSqMeters = {};
+
+      if (minAreaSqMeters !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        filter.areaSqMeters.$gte = minAreaSqMeters;
+      }
+
+      if (maxAreaSqMeters !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        filter.areaSqMeters.$lte = maxAreaSqMeters;
+      }
+    }
+
+    if (bedrooms !== undefined) {
+      filter.bedrooms = bedrooms;
+    }
+
+    if (bathrooms !== undefined) {
+      filter.bathrooms = bathrooms;
+    }
+
+    if (latitude !== undefined && longitude !== undefined) {
+      filter.location = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [longitude, latitude],
+          },
+          ...(radiusKm !== undefined && {
+            $maxDistance: radiusKm * 1000,
+          }),
+        },
+      };
+    }
+
+    return this.listingModel.find(filter).exec();
   }
 }

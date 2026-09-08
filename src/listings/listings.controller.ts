@@ -251,10 +251,10 @@ export class ListingsController {
     );
   }
 
-  // @Get()
-  // findAll() {
-  //   return 'This action returns all listings';
-  // }
+  @Get()
+  findAll() {
+    return 'This action returns all listings';
+  }
 
   @Get(':id')
   @ApiOperation({
