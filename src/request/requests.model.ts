@@ -26,10 +26,9 @@ export class ListingRequest {
 
     @Prop({
         type: String,
-        required: true,
         default:null
     })
-    rejectionReason: string;
+    rejectionReason?: string;
 
     @Prop({
         type: String,

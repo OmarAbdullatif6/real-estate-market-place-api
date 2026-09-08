@@ -7,11 +7,13 @@ import { UsersModule } from '../users/users.module';
 import { ListingsModule } from '../listings/listings.module';
 import { User, UserSchema } from '../users/users.model';
 import { Listing, ListingSchema } from '../listings/listings.model';
+import { RequestsModule } from '../request/requests.module';
 
 @Module({
   controllers: [AdminsController],
   providers: [AdminsService],
   imports: [
+    RequestsModule,
     UsersModule,
     ListingsModule,
     AuthModule,

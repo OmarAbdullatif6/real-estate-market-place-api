@@ -1,8 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { Model } from "mongoose";
 import { ListingRequest, RequestStatus } from "./requests.model";
 import { InjectModel } from "@nestjs/mongoose";
 import { CloudinaryService } from "../cloudinary/cloudinary.service";
+import { RejectRequestDto } from "./dtos/rejectionReason.dto";
 
 @Injectable()
 export class RequestsService {
@@ -51,4 +52,59 @@ export class RequestsService {
         }
 
     }
+    public async approve(reqId: string) {
+        const request = await this.requestModel.findById(reqId);
+        if (!request) throw new NotFoundException("No request for this id");
+        request.status = RequestStatus.APPROVED;
+        return await request.save();
+    };
+    public async reject(reqId: string, dto: RejectRequestDto) {
+        const request = await this.requestModel.findById(reqId);
+        if (!request) throw new NotFoundException("No request for this id");
+        request.status = RequestStatus.REJECTED;
+        request.rejectionReason = dto.message;
+        return await request.save();
+    };
+    public async getAll() {
+        return this.requestModel.aggregate([
+            {
+                $addFields: {
+                    statusOrder: {
+                        $switch: {
+                            branches: [
+                                { case: { $eq: ["$status", RequestStatus.PENDING] }, then: 1 },
+                                { case: { $eq: ["$status", RequestStatus.APPROVED] }, then: 2 },
+                                { case: { $eq: ["$status", RequestStatus.REJECTED] }, then: 3 },
+                            ],
+                            default: 4,
+                        },
+                    },
+                },
+            },
+            {
+                $sort: {
+                    statusOrder: 1,
+                    createdAt: 1,
+                },
+            },
+            {
+                $project: {
+                    statusOrder: 0,
+                },
+            },
+        ]);
+    }
+
+    public async cancel(userId: string, reqId: string) {
+        const request = await this.requestModel.findById(reqId);
+        if (!request) {
+            throw new NotFoundException("No request for this id");
+        }
+        if (request.requester.toString()!==userId) {
+            throw new ForbiddenException("Can't cancel this request");
+        }
+        return {
+            message: "Request canceled successfully"
+        }
+    };
 }

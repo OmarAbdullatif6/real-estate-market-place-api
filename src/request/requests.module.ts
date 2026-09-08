@@ -1,16 +1,18 @@
 import { Module } from '@nestjs/common';
 import { RequestsService } from './requests.service';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
-import { RequestController } from './requests.controller';
+import { RequestsController } from './requests.controller';
 import { ListingRequest, ListingRequestSchema } from './requests.model';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from '../auth/auth.module';
 @Module({
-    imports: [CloudinaryModule,
+    exports:[RequestsService],
+    imports: [AuthModule,CloudinaryModule,
         MongooseModule.forFeature([{ name: ListingRequest.name, schema: ListingRequestSchema }]),
 
     ],
     providers: [RequestsService],
-    controllers: [RequestController],
+    controllers: [RequestsController],
 })
 
-export class RequestModule { }
+export class RequestsModule { }

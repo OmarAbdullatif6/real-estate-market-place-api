@@ -16,6 +16,7 @@ import {
   ApiUnauthorizedResponse,
   ApiNotFoundResponse,
   ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 import { AdminsService } from './admins.service';
 import { AuthRolesGuard } from '../auth/guards/auth-roles.guard';
@@ -26,14 +27,23 @@ import type { PayloadType } from '../types/payload.type';
 import { ParseObjectIdPipe } from '../pipes/validateId.pipe';
 import { ListingsQueryDto } from './dtos/listings-query.dto';
 import { UsersQueryDto } from './dtos/users-query.dto';
+import { RequestsService } from '../request/requests.service';
+import { RejectRequestDto } from '../request/dtos/rejectionReason.dto';
+import { Types } from 'mongoose';
 import { RejectListingDto } from './dtos/reject-listing.dto';
+import { AuthGuard } from '../auth/guards/auth.guard';
 
 @ApiBearerAuth('access-token')
-@UseGuards(AuthRolesGuard)
+@UseGuards(AuthGuard, AuthRolesGuard)
 @Roles(UserRole.ADMIN)
 @Controller('admins')
 export class AdminsController {
-  constructor(private readonly adminsService: AdminsService) {}
+  constructor(
+    private readonly adminsService: AdminsService,
+    private readonly requestService: RequestsService
+
+  ) {
+  }
 
   @Get('dashboard')
   @ApiTags('Admin - Dashboard')
@@ -156,5 +166,69 @@ export class AdminsController {
   })
   deleteUser(@Param('id', ParseObjectIdPipe) id: string) {
     return this.adminsService.deleteUser(id);
+  }
+
+
+  @Get('requests')
+  @ApiTags('Admin - Requests')
+  @ApiOperation({ summary: 'Get all listing requests' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listing requests retrieved successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - admin role required',
+  })
+  getAllRequests() {
+    return this.requestService.getAll();
+  }
+
+  @Patch('requests/:id/approve')
+  @ApiTags('Admin - Requests')
+  @ApiOperation({ summary: 'Approve a listing request' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listing request approved successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Listing request not found',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - admin role required',
+  })
+  approveRequest(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.requestService.approve(id);
+  }
+
+  @Patch('requests/:id/reject')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        rejectionReason: {
+          type: 'string',
+          example: 'The identity document is not clear enough.',
+        },
+      },
+      required: ['rejectionReason'],
+    },
+  })
+  @ApiTags('Admin - Requests')
+  @ApiOperation({ summary: 'Reject a listing request' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listing request rejected successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Listing request not found',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - admin role required',
+  })
+  rejectRequest(
+    @Param('id', ParseObjectIdPipe) id: Types.ObjectId,
+    @Body() body: RejectRequestDto,
+  ) {
+    return this.requestService.reject(id.toString(), body);
   }
 }
