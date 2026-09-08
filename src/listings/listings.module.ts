@@ -4,6 +4,7 @@ import { ListingsController } from './listings.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ListingSchema } from './listings.model';
 import { Listing } from './listings.model';
+import { User, UserSchema } from '../users/users.model';
 import { AuthModule } from '../auth/auth.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { GeocodingService } from '../common/services/geocoding.service';
@@ -16,6 +17,10 @@ import { GeocodingService } from '../common/services/geocoding.service';
       {
         name: Listing.name,
         schema: ListingSchema,
+      },
+      {
+        name: User.name,
+        schema: UserSchema,
       },
     ]),
     CloudinaryModule,

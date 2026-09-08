@@ -15,7 +15,7 @@ import { ListingsModule } from '../listings/listings.module';
     ListingsModule,
     forwardRef(() => AuthModule),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-    CloudinaryModule
+    CloudinaryModule,
   ],
   controllers: [UsersController],
   providers: [UsersService, FavoritesProvider],

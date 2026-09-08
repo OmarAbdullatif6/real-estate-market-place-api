@@ -13,6 +13,7 @@ import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UpdateListingDto } from './dtos/updateListing.dto';
 import { SearchListingDto } from './dtos/SearchListing.dto';
 import { GeocodingService } from '../common/services/geocoding.service';
+import { User } from '../users/users.model';
 
 @Injectable()
 export class ListingsService {
@@ -21,6 +22,7 @@ export class ListingsService {
     private listingModel: Model<Listing>,
     private cloudinaryService: CloudinaryService,
     private geocodingService: GeocodingService,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
   ) {}
 
   checkCoordinatesInRange(longitude: number, latitude: number) {
@@ -290,5 +292,40 @@ export class ListingsService {
         'title price listingType propertyType areaSqMeters bedrooms bathrooms images location isPromoted createdAt',
       )
       .exec();
+  }
+
+  async delete(id: string, ownerId: string): Promise<void> {
+    const listing = await this.listingModel.findOne({
+      _id: id,
+    });
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    if (listing.owner.toString() !== ownerId) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this listing',
+      );
+    }
+
+    if (listing.images.length) {
+      await Promise.all(
+        listing.images.map(async (image) => {
+          const result = await this.cloudinaryService.deleteFileAuto(image);
+          if (result.result === 'not found') {
+            console.warn(`Image not found in Cloudinary: ${image}`);
+          }
+          return result;
+        }),
+      );
+    }
+
+    await this.userModel.updateMany(
+      { favorites: listing._id },
+      { $pull: { favorites: listing._id } },
+    );
+
+    await this.listingModel.deleteOne({ _id: id }).exec();
   }
 }

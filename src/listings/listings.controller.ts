@@ -12,6 +12,7 @@ import {
   HttpCode,
   Patch,
   Query,
+  Delete,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -533,5 +534,12 @@ export class ListingsController {
       req.currentUser.id,
       files,
     );
+  }
+
+  @UseGuards(AuthGuard, AuthRolesGuard)
+  @Roles(UserRole.SELLER)
+  @Delete(':id')
+  delete(@Param('id') id: string, @Req() req: ReqWithUser) {
+    return this.listingsService.delete(id, req.currentUser.id);
   }
 }
