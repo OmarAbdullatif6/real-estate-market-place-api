@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { VersioningType, ValidationPipe } from '@nestjs/common';
+import { VersioningType, ValidationPipe, INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
@@ -10,10 +10,14 @@ import { AdminsModule } from './admins/admins.module';
 import { ListingsModule } from './listings/listings.module';
 import { RequestsModule } from './request/requests.module';
 
-async function bootstrap() {
+async function createNestApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -68,6 +72,24 @@ async function bootstrap() {
     ],
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  return app;
 }
-bootstrap();
+
+let cachedServer: any;
+
+export default async function handler(req: any, res: any) {
+  if (!cachedServer) {
+    const app = await createNestApp();
+    await app.init();
+    cachedServer = app.getHttpAdapter().getInstance();
+  }
+  return cachedServer(req, res);
+}
+
+if (!process.env.VERCEL) {
+  (async () => {
+    const app = await createNestApp();
+    await app.listen(process.env.PORT ?? 3000);
+  })();
+}
+
