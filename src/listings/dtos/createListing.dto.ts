@@ -132,12 +132,4 @@ export class CreateListingDto {
   @IsString()
   @IsNotEmpty()
   address: string;
-
-  @ApiProperty({
-    example: 'Cairo',
-    description: 'City where the property is located.',
-  })
-  @IsString()
-  @IsNotEmpty()
-  city: string;
 }

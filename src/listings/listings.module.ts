@@ -6,9 +6,10 @@ import { ListingSchema } from './listings.model';
 import { Listing } from './listings.model';
 import { AuthModule } from '../auth/auth.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { GeocodingService } from '../common/services/geocoding.service';
 
 @Module({
-  exports:[ListingsService],
+  exports: [ListingsService],
   imports: [
     AuthModule,
     MongooseModule.forFeature([
@@ -19,7 +20,7 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
     ]),
     CloudinaryModule,
   ],
-  providers: [ListingsService],
+  providers: [ListingsService, GeocodingService],
   controllers: [ListingsController],
 })
 export class ListingsModule {}

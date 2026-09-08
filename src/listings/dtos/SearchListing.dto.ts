@@ -43,10 +43,6 @@ export class SearchListingDto {
   city?: string;
 
   @ApiPropertyOptional({
-    example: 'Nasr City',
-    description: 'Filter listings by address.',
-  })
-  @ApiPropertyOptional({
     enum: ListingType,
     example: ListingType.SALE,
     description: 'Filter by listing type.',

@@ -12,6 +12,7 @@ import { CreateListingDto } from './dtos/createListing.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UpdateListingDto } from './dtos/updateListing.dto';
 import { SearchListingDto } from './dtos/SearchListing.dto';
+import { GeocodingService } from '../common/services/geocoding.service';
 
 @Injectable()
 export class ListingsService {
@@ -19,8 +20,19 @@ export class ListingsService {
     @InjectModel(Listing.name)
     private listingModel: Model<Listing>,
     private cloudinaryService: CloudinaryService,
+    private geocodingService: GeocodingService,
   ) {}
 
+  checkCoordinatesInRange(longitude: number, latitude: number) {
+    if (
+      longitude < -180 ||
+      longitude > 180 ||
+      latitude < -90 ||
+      latitude > 90
+    ) {
+      throw new BadRequestException('Invalid geographical coordinates');
+    }
+  }
   async create(
     createListingDto: CreateListingDto,
     ownerId: string,
@@ -42,13 +54,21 @@ export class ListingsService {
       }
     }
 
+    const [longitude, latitude] = createListingDto.coordinates;
+
+    this.checkCoordinatesInRange(longitude, latitude);
+    const city = await this.geocodingService.getCityFromCoordinates(
+      latitude,
+      longitude,
+    );
+
     const createdListing = new this.listingModel({
       ...createListingDto,
       location: {
         type: 'Point',
         coordinates: createListingDto.coordinates,
         address: createListingDto.address,
-        city: createListingDto.city,
+        city,
       },
       owner: ownerId,
       images: imageUrls,
@@ -75,7 +95,7 @@ export class ListingsService {
     files?: Express.Multer.File[],
   ): Promise<Listing> {
     const { removedImages, ...otherUpdates } = updateListingDto;
-    const { coordinates, address, city, ...updateData } = otherUpdates;
+    const { coordinates, address, ...updateData } = otherUpdates;
 
     const hasFieldUpdates = Object.keys(otherUpdates).length > 0;
     const hasImagesToRemove = !!removedImages?.length;
@@ -148,12 +168,21 @@ export class ListingsService {
 
     Object.assign(listing, updateData);
 
-    if (coordinates || address || city) {
+    if (coordinates || address) {
+      let city = listing.location.city;
+      if (coordinates) {
+        const [longitude, latitude] = coordinates;
+        this.checkCoordinatesInRange(longitude, latitude);
+        city = await this.geocodingService.getCityFromCoordinates(
+          latitude,
+          longitude,
+        );
+      }
       listing.location = {
         type: 'Point',
         coordinates: coordinates ?? listing.location.coordinates,
         address: address ?? listing.location.address,
-        city: city ?? listing.location.city,
+        city,
       };
     }
 
@@ -183,6 +212,7 @@ export class ListingsService {
       radiusKm,
     } = searchDto;
 
+    console.log('Search DTO:', searchDto);
     const filter: Record<string, any> = {
       status: ListingStatus.APPROVED,
       isAvailable: true,
@@ -253,6 +283,12 @@ export class ListingsService {
       };
     }
 
-    return this.listingModel.find(filter).exec();
+    console.log('MongoDB filter:', JSON.stringify(filter, null, 2));
+    return this.listingModel
+      .find(filter)
+      .select(
+        'title price listingType propertyType areaSqMeters bedrooms bathrooms images location isPromoted createdAt',
+      )
+      .exec();
   }
 }

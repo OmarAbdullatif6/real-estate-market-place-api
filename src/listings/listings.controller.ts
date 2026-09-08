@@ -11,6 +11,7 @@ import {
   HttpStatus,
   HttpCode,
   Patch,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -41,6 +42,7 @@ import { ImageFilesPipe } from '../pipes/image-files.pipe';
 import { Multer } from 'multer';
 import { UpdateListingDto } from './dtos/updateListing.dto';
 import { ListingType, PropertyType } from './listings.model';
+import { SearchListingDto } from './dtos/SearchListing.dto';
 
 @ApiTags('Listings')
 @Controller('listings')
@@ -252,8 +254,85 @@ export class ListingsController {
   }
 
   @Get()
-  findAll() {
-    return 'This action returns all listings';
+  @ApiOperation({
+    summary: 'Search and retrieve property listings',
+    description:
+      'Returns approved and available property listings based on the provided filters. All query parameters are optional.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Listings retrieved successfully.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            example: 'Modern 3 Bedroom Apartment',
+          },
+          price: {
+            type: 'number',
+            example: 3500000,
+          },
+          listingType: {
+            type: 'string',
+            example: 'sale',
+          },
+          propertyType: {
+            type: 'string',
+            example: 'apartment',
+          },
+          areaSqMeters: {
+            type: 'number',
+            example: 180,
+          },
+          bedrooms: {
+            type: 'number',
+            example: 3,
+          },
+          bathrooms: {
+            type: 'number',
+            example: 2,
+          },
+          images: {
+            type: 'array',
+            items: {
+              type: 'string',
+            },
+            example: [
+              'https://example.com/image1.jpg',
+              'https://example.com/image2.jpg',
+            ],
+          },
+          location: {
+            type: 'object',
+            properties: {
+              city: {
+                type: 'string',
+                example: 'Nasr City',
+              },
+              address: {
+                type: 'string',
+                example: '90th Street, Fifth Settlement',
+              },
+            },
+          },
+          isPromoted: {
+            type: 'boolean',
+            example: true,
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2026-09-08T10:30:00.000Z',
+          },
+        },
+      },
+    },
+  })
+  findAll(@Query() searchDto: SearchListingDto) {
+    return this.listingsService.searchListings(searchDto);
   }
 
   @Get(':id')
