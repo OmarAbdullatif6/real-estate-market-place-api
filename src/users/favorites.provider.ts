@@ -1,21 +1,13 @@
-import { InjectModel } from "@nestjs/mongoose";
-import { User } from "./users.model";
-import { Model, Types } from "mongoose";
+import { Types } from "mongoose";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { ListingsService } from './../listings/listings.service';
 @Injectable()
 export class FavoritesProvider {
   constructor(
-    @InjectModel(User.name) private readonly usersModel: Model<User>,
     private readonly usersService: UsersService,
     private readonly listingsService: ListingsService
   ) { }
-
-
-
-
-
 
   /**
 * 
