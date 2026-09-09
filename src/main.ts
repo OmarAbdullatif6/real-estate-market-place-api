@@ -58,7 +58,7 @@ async function createNestApp(): Promise<INestApplication> {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    include: [AuthModule, UsersModule, AdminsModule, RequestsModule],
+    include: [AuthModule, UsersModule, ListingsModule, AdminsModule, RequestsModule],
     autoTagControllers: false,
   });
   const SWAGGER_CDN =
