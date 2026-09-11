@@ -80,7 +80,13 @@ export class ListingsService {
   }
 
   async findOneById(id: string): Promise<Listing> {
-    const listing = await this.listingModel.findById(id).exec();
+    const listing = await this.listingModel
+      .findById(id)
+      .select(
+        'title price listingType propertyType areaSqMeters bedrooms bathrooms images location isPromoted createdAt owner',
+      )
+      .populate('owner', 'phoneNumber email')
+      .exec();
     if (!listing) {
       throw new NotFoundException(`Listing with ID ${id} not found`);
     }
@@ -214,7 +220,6 @@ export class ListingsService {
       radiusKm,
     } = searchDto;
 
-    console.log('Search DTO:', searchDto);
     const filter: Record<string, any> = {
       status: ListingStatus.APPROVED,
       isAvailable: true,
@@ -289,8 +294,9 @@ export class ListingsService {
     return this.listingModel
       .find(filter)
       .select(
-        'title price listingType propertyType areaSqMeters bedrooms bathrooms images location isPromoted createdAt',
+        'title price listingType propertyType areaSqMeters bedrooms bathrooms images location isPromoted createdAt owner',
       )
+      .populate('owner', 'phoneNumber email')
       .exec();
   }
 
