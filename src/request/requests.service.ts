@@ -27,6 +27,7 @@ export class RequestsService {
             else if (existedRequest.status === RequestStatus.REJECTED) {
                 const uploadedImage = await this.cloudinaryService.uploadImage(identityDocument, 'real-estate/identities');
                 existedRequest.status = RequestStatus.PENDING;
+                existedRequest.rejectionReason = null;
                 if (existedRequest.identityDocument) {
                     await this.cloudinaryService.deleteFile(existedRequest.identityDocument, 'image');
                 }
@@ -95,16 +96,28 @@ export class RequestsService {
         ]);
     }
 
-    public async cancel(userId: string, reqId: string) {
+    public async cancel(reqId: string, userId: string) {
         const request = await this.requestModel.findById(reqId);
         if (!request) {
             throw new NotFoundException("No request for this id");
         }
-        if (request.requester.toString()!==userId) {
+        if (request.requester.toString() !== userId) {
             throw new ForbiddenException("Can't cancel this request");
         }
+        if (request.status !== RequestStatus.PENDING)
+            throw new BadRequestException("Only pending requests can be canceled");
+
+        await request.deleteOne();
         return {
             message: "Request canceled successfully"
         }
     };
+    public async getUserRequest(userId: string) {
+        const request = await this.checkIfUserHaveRequest(userId);
+        if (!request) throw new NotFoundException("No request for this user");
+        return request;
+    }
+    public checkIfUserHaveRequest(userId: string) {
+        return this.requestModel.findOne({ requester: userId });
+    }
 }

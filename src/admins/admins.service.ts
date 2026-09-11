@@ -10,6 +10,7 @@ import {
 import { UserRole } from '../types/userRole.type';
 import { ListingsQueryDto } from './dtos/listings-query.dto';
 import { UsersQueryDto } from './dtos/users-query.dto';
+import { ListingRequest } from '../request/requests.model';
 
 @Injectable()
 export class AdminsService {
@@ -17,7 +18,9 @@ export class AdminsService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     @InjectModel(Listing.name)
     private readonly listingModel: Model<ListingDocument>,
-  ) {}
+     @InjectModel(ListingRequest.name)
+    private readonly requestsModel: Model<ListingRequest>,
+  ) { }
 
   // Dashboard stats
   async getDashboardStats() {
@@ -270,12 +273,17 @@ export class AdminsService {
   }
 
   async deleteUser(id: string) {
-    const user = await this.userModel.findByIdAndDelete(id);
-
+    const user = await this.userModel.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
+    await this.listingModel.deleteMany({
+      owner: id,
+    });
+    await this.requestsModel.deleteMany({
+      requester: id,
+    });
+    await user.deleteOne()
     return {
       message: 'User deleted successfully',
     };

@@ -4,12 +4,18 @@ import { Model } from "mongoose";
 import { InjectModel } from "@nestjs/mongoose";
 import { CloudinaryService } from './../cloudinary/cloudinary.service';
 import { UpdateUserDto } from "./dtos/update-user.dto";
+import { PayloadType } from "../types/payload.type";
+import { UserRole } from "../types/userRole.type";
+import { RequestsService } from './../request/requests.service';
+import { Listing } from "../listings/listings.model";
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectModel(User.name) private readonly usersModel: Model<User>,
         private readonly cloudinaryService: CloudinaryService,
+        private readonly requestsService: RequestsService,
+         @InjectModel(Listing.name) private readonly listingModel: Model<Listing>,
     ) { }
     /**
       * 
@@ -25,10 +31,10 @@ export class UsersService {
     public async uploadUserImage(userId: string, file: Express.Multer.File,) {
         const user = await this.getOneBy(userId);
         //in case user have already image
+        if (!file) throw new BadRequestException("Image is required")
         if (user.userImage) {
             await this.cloudinaryService.deleteFileAuto(user.userImage);
         }
-        if (!file) throw new BadRequestException("Image is required")
         try {
 
             const uploadedImage = await this.cloudinaryService.uploadImage(file, 'real-estate/users',);
@@ -47,17 +53,26 @@ export class UsersService {
 
     public async deleteUserImage(userId: string) {
         const user = await this.getOneBy(userId);
-        if (!user.userImage) throw new BadRequestException("User already don't have image")
+        if (!user.userImage) throw new BadRequestException("User doesn't have an image")
+        await this.cloudinaryService.deleteFile(user.userImage, 'image');
         user.userImage = null;
         await user.save();
-        await this.cloudinaryService.deleteFile(user.userImage, 'image');
         return {
             message: "Image deleted successfully"
         }
     }
-    public async getMyProfile(userId: string) {
+    public async getMyProfile(payload: PayloadType) {
+        const userId = payload.id;
+        let request = null;
+        let listings = null;
+        if (payload.role === UserRole.SELLER) {
+            request = await this.requestsService.checkIfUserHaveRequest(userId);
+            listings = await this.listingModel.find({ owner: userId });
+        }
+
         const user = await this.getOneBy(userId);
-        const { fullName, email, phoneNumber, userImage, viewersCount, id, favorites } = user
+        const { fullName, email, phoneNumber, userImage, viewersCount, id, favorites, role } = user;
+
         return {
             user: {
                 id,
@@ -66,33 +81,50 @@ export class UsersService {
                 viewersCount,
                 phoneNumber,
                 userImage,
-                favoritesCount: favorites.length
-
+                role,
+                favoritesCount: favorites.length,
+                ...(payload.role === UserRole.SELLER && {
+                    request,
+                    listings,
+                    listingsCount: listings.length,
+                }),
             }
         }
     }
+    public async getAnyUserProfile(userId: string) {
+        const user = await this.usersModel.findByIdAndUpdate(
+            userId,
+            { $inc: { viewersCount: 1 } },
+            { new: true },
+        );
+
+        if (!user) {
+            throw new NotFoundException("User not found");
+        }
+
+        return {
+            user: {
+                id: user.id,
+                fullName: user.fullName,
+                phoneNumber: user.phoneNumber,
+                userImage: user.userImage,
+            },
+        };
+    }
     public async updateMyProfile(userId: string, data: UpdateUserDto) {
         const user = await this.getOneBy(userId);
-        const { fullName, email, phoneNumber, userImage, viewersCount, id } = user;
         user.fullName = data.fullName ?? user.fullName;
         user.phoneNumber = data.phoneNumber ?? user.phoneNumber;
         await user.save();
         return {
             user: {
-                id,
-                fullName,
-                email,
-                viewersCount,
-                phoneNumber,
-                userImage
-
-            }
-        }
-    }
-    public async incrementViewers(userId: string) {
-        const user = await this.getOneBy(userId);
-        user.viewersCount++;
-        await user.save();
-        return { count: user.viewersCount };
+                id: user.id,
+                fullName: user.fullName,
+                email: user.email,
+                viewersCount: user.viewersCount,
+                phoneNumber: user.phoneNumber,
+                userImage: user.userImage,
+            },
+        };
     }
 }

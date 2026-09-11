@@ -7,12 +7,14 @@ import { FavoritesProvider } from './favorites.provider';
 import { AuthModule } from '../auth/auth.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { ListingsModule } from '../listings/listings.module';
+import { RequestsModule } from '../request/requests.module';
 
 @Module({
   exports: [MongooseModule, UsersService],
 
   imports: [
     ListingsModule,
+    RequestsModule,
     forwardRef(() => AuthModule),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     CloudinaryModule,

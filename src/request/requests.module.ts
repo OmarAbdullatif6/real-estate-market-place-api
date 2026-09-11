@@ -6,7 +6,7 @@ import { ListingRequest, ListingRequestSchema } from './requests.model';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 @Module({
-    exports:[RequestsService],
+    exports:[RequestsService,MongooseModule],
     imports: [AuthModule,CloudinaryModule,
         MongooseModule.forFeature([{ name: ListingRequest.name, schema: ListingRequestSchema }]),
 

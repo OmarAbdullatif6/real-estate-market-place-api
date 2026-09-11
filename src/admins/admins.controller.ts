@@ -17,6 +17,7 @@ import {
   ApiNotFoundResponse,
   ApiQuery,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import { AdminsService } from './admins.service';
 import { AuthRolesGuard } from '../auth/guards/auth-roles.guard';
@@ -196,8 +197,14 @@ export class AdminsController {
   @ApiUnauthorizedResponse({
     description: 'Unauthorized - admin role required',
   })
-  approveRequest(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.requestService.approve(id);
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'Request ID',
+    example: '6a9d616a7346b5d68a4bf239',
+  })
+  approveRequest(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
+    return this.requestService.approve(id.toString());
   }
 
   @Patch('requests/:id/reject')
@@ -212,6 +219,12 @@ export class AdminsController {
       },
       required: ['rejectionReason'],
     },
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'Request ID',
+    example: '6a9d616a7346b5d68a4bf239',
   })
   @ApiTags('Admin - Requests')
   @ApiOperation({ summary: 'Reject a listing request' })

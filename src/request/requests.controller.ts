@@ -1,70 +1,111 @@
 import {
-    BadRequestException,
     Controller,
     Delete,
     Param,
     Post,
-    Body,
     UploadedFile,
     UseInterceptors,
     UseGuards,
+    Get,
+    ParseIntPipe,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
+    ApiBadRequestResponse,
     ApiBearerAuth,
     ApiBody,
+    ApiConflictResponse,
     ApiConsumes,
+    ApiForbiddenResponse,
+    ApiNotFoundResponse,
     ApiOperation,
     ApiParam,
     ApiResponse,
     ApiTags,
+    ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 
 import { RequestsService } from "./requests.service";
 import type { PayloadType } from "../types/payload.type";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { AuthGuard } from "../auth/guards/auth.guard";
+import { AuthRolesGuard } from "../auth/guards/auth-roles.guard";
+import { Roles } from "../auth/decorators/user-role.decorator";
+import { UserRole } from "../types/userRole.type";
+import { Types } from "mongoose";
 
 @ApiTags("Requests")
+@ApiBearerAuth('access-token')
 @Controller("/requests")
 export class RequestsController {
     constructor(
         private readonly requestsService: RequestsService,
     ) { }
+    @Get('my-request')
+    @UseGuards(AuthGuard, AuthRolesGuard)
+    @Roles(UserRole.SELLER)
+    @ApiOperation({
+        summary: 'Get current seller request',
+        description: 'Retrieves the request belonging to the currently authenticated seller.',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Seller request retrieved successfully.',
+    })
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - authentication required.',
+    })
+    @ApiForbiddenResponse({
+        description: 'Forbidden - seller role required.',
+    })
+    @ApiNotFoundResponse({
+        description: 'No request found for this seller.',
+    })
+    async getUserRequest(@CurrentUser() payload: PayloadType) {
+        const userId = payload.id;
+
+        return this.requestsService.getUserRequest(userId);
+    }
+
+
 
     @Post()
-    @ApiBearerAuth('access-token')
+    @UseGuards(AuthGuard, AuthRolesGuard)
+    @Roles(UserRole.SELLER)
     @ApiOperation({
-        summary: "Submit a listing verification request",
+        summary: 'Submit a listing verification request',
+        description: 'Allows an authenticated seller to submit a listing verification request.',
     })
-    @ApiConsumes("multipart/form-data")
+    @ApiConsumes('multipart/form-data')
     @ApiBody({
         schema: {
-            type: "object",
+            type: 'object',
             properties: {
                 identityDocument: {
-                    type: "string",
-                    format: "binary",
+                    type: 'string',
+                    format: 'binary',
                 },
             },
-            required: ["identityDocument"],
+            required: ['identityDocument'],
         },
     })
     @ApiResponse({
         status: 201,
-        description: "Verification request submitted successfully.",
+        description: 'Verification request submitted successfully.',
     })
-    @ApiResponse({
-        status: 400,
-        description: "Identity document is required.",
+    @ApiBadRequestResponse({
+        description: 'Identity document is required.',
     })
-    @ApiResponse({
-        status: 409,
-        description: "User already has a pending or approved request.",
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - authentication required.',
     })
-    @UseInterceptors(FileInterceptor("identityDocument"))
-    @UseGuards(AuthGuard)
-
+    @ApiForbiddenResponse({
+        description: 'Forbidden - seller role required.',
+    })
+    @ApiConflictResponse({
+        description: 'User already has a pending or approved request.',
+    })
+    @UseInterceptors(FileInterceptor('identityDocument'))
     async createNewRequest(
         @UploadedFile() identityDocument: Express.Multer.File,
         @CurrentUser() payload: PayloadType,
@@ -75,29 +116,40 @@ export class RequestsController {
         );
     }
 
-    @Delete(":reqId")
-    @ApiBearerAuth('access-token')
-    @UseGuards(AuthGuard)
-    @ApiOperation({
-        summary: "Cancel a verification request",
-    })
+
+    @Delete(':reqId')
     @ApiParam({
-        name: "reqId",
-        description: "The ID of the request to cancel",
-        example: "66d123456789abcdef123456",
+        name: 'reqId',
+        type: String,
+        description: 'The Request ID of the verification request to cancel',
+        example: '6a9d616a7346b5d68a4bf239',
+    })
+    @UseGuards(AuthGuard, AuthRolesGuard)
+    @Roles(UserRole.SELLER)
+    @ApiOperation({
+        summary: 'Cancel a verification request',
+        description:
+            'Allows an authenticated seller to cancel their own verification request. Only the seller who created the request can cancel it.',
     })
     @ApiResponse({
         status: 200,
-        description: "Request canceled successfully.",
+        description: 'Request canceled successfully.',
     })
-    @ApiResponse({
-        status: 404,
-        description: "Request not found.",
+    @ApiUnauthorizedResponse({
+        description: 'Unauthorized - authentication required.',
+    })
+    @ApiForbiddenResponse({
+        description:
+            'Forbidden - seller role required, or the request does not belong to the authenticated seller.',
+    })
+    @ApiNotFoundResponse({
+        description: 'Request not found.',
     })
     async cancelRequestFromUser(
-        @Param("reqId") reqId: string,
+        @Param('reqId', ParseIntPipe) reqId: Types.ObjectId,
         @CurrentUser() payload: PayloadType,
     ) {
-        return this.requestsService.cancel(reqId,payload.id);
+        return this.requestsService.cancel(reqId.toString(), payload.id);
     }
+
 }

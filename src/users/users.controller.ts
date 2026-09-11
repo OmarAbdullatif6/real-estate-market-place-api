@@ -28,10 +28,12 @@ import {
     ApiNotFoundResponse,
     ApiConsumes,
     ApiBody,
+    ApiParam,
 } from '@nestjs/swagger';
 
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ParseObjectIdPipe } from '@nestjs/mongoose';
+import { MyProfileResponseDto } from './dtos/profileResponse.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
@@ -40,7 +42,7 @@ export class UsersController {
     constructor(
         private readonly usersService: UsersService,
         private readonly favoritesProvider: FavoritesProvider,
-    ) {}
+    ) { }
 
     // ==================== Profile ====================
 
@@ -51,7 +53,8 @@ export class UsersController {
     })
     @ApiResponse({
         status: 200,
-        description: 'User profile retrieved successfully',
+        description: 'User profile retrieved successfully. Request is returned only for sellers who have submitted a request.',
+        type: MyProfileResponseDto,
     })
     @ApiUnauthorizedResponse({
         description: 'Unauthorized - valid JWT token is required',
@@ -59,7 +62,24 @@ export class UsersController {
     public getMyProfile(
         @CurrentUser() payload: PayloadType,
     ) {
-        return this.usersService.getMyProfile(payload.id);
+        return this.usersService.getMyProfile(payload);
+    }
+    @Get(':id/profile')
+    @UseGuards(AuthGuard)
+    @ApiParam({
+        name: 'id',
+        type: String,
+        description: 'User ID',
+        example: '6a9d616a7346b5d68a4bf239',
+    })
+
+    @ApiOperation({
+        summary: 'Get another user profile',
+    })
+    public getAnyUserProfile(
+        @Param('id', ParseObjectIdPipe) userId: Types.ObjectId,
+    ) {
+        return this.usersService.getAnyUserProfile(userId.toString());
     }
 
     @Patch('profile')
@@ -153,26 +173,6 @@ export class UsersController {
         return this.usersService.deleteUserImage(payload.id);
     }
 
-    // ==================== Profile Views ====================
-
-    @Patch('profile/increment-views/:id')
-    @ApiOperation({
-        summary: 'Increment profile viewers count for any user',
-    })
-    @ApiResponse({
-        status: 200,
-        description: 'Profile viewers count incremented successfully',
-        schema: {
-            example: {
-                count: 15,
-            },
-        },
-    })
-    public async incrementViewers(
-        @Param('id') id:string
-    ) {
-        return this.usersService.incrementViewers(id);
-    }
 
     // ==================== Favorites ====================
 
@@ -198,6 +198,12 @@ export class UsersController {
     @UseGuards(AuthGuard)
     @ApiOperation({
         summary: 'Get a specific favorite',
+    })
+    @ApiParam({
+        name: 'id',
+        type: String,
+        description: 'Listing ID',
+        example: '6a9d616a7346b5d68a4bf239',
     })
     @ApiResponse({
         status: 200,
@@ -247,6 +253,12 @@ export class UsersController {
     @ApiResponse({
         status: 200,
         description: 'Listing favorite status toggled successfully',
+    })
+    @ApiParam({
+        name: 'id',
+        type: String,
+        description: 'Listing ID',
+        example: '6a9d616a7346b5d68a4bf239',
     })
     @ApiUnauthorizedResponse({
         description: 'Unauthorized - valid JWT token is required',

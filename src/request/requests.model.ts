@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, Types } from 'mongoose';
 import { User } from "../users/users.model";
-import { Listing } from "../listings/listings.model";
 export enum RequestStatus {
     PENDING = 'pending',
     APPROVED = 'approved',

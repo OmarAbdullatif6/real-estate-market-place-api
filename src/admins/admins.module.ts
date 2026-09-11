@@ -16,6 +16,7 @@ import { RequestsModule } from '../request/requests.module';
     RequestsModule,
     UsersModule,
     ListingsModule,
+    RequestsModule,
     AuthModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
