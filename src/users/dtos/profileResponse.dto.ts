@@ -1,6 +1,6 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { RequestResponseDto } from "../../request/dtos/RequestResponse.dto";
-
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { RequestResponseDto } from '../../request/dtos/RequestResponse.dto';
+import { ListingResponseDto } from '../../listings/dtos/listingResponse.dto';
 export class MyProfileResponseDto {
     @ApiProperty()
     id: string;
@@ -23,9 +23,23 @@ export class MyProfileResponseDto {
     @ApiProperty()
     favoritesCount: number;
 
+    @ApiProperty()
+    role: string;
+
     @ApiPropertyOptional({
-        description: 'Seller listing request, returned only if the user is a seller and has a request',
+        description:
+            'Seller listing request, returned only if the user is a seller',
         type: RequestResponseDto,
+        nullable: true,
     })
-    request?: RequestResponseDto;
+    request?: RequestResponseDto | null;
+
+    @ApiPropertyOptional({
+        description: 'Seller listings, returned only if the user is a seller',
+        type: [ListingResponseDto],
+    })
+    listings?: ListingResponseDto[];
+
+    @ApiPropertyOptional()
+    listingsCount?: number;
 }

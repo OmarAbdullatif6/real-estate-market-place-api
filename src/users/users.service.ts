@@ -7,6 +7,7 @@ import { UpdateUserDto } from "./dtos/update-user.dto";
 import { PayloadType } from "../types/payload.type";
 import { UserRole } from "../types/userRole.type";
 import { RequestsService } from './../request/requests.service';
+import { Listing } from "../listings/listings.model";
 
 @Injectable()
 export class UsersService {
@@ -14,6 +15,7 @@ export class UsersService {
         @InjectModel(User.name) private readonly usersModel: Model<User>,
         private readonly cloudinaryService: CloudinaryService,
         private readonly requestsService: RequestsService,
+         @InjectModel(Listing.name) private readonly listingModel: Model<Listing>,
     ) { }
     /**
       * 
@@ -62,12 +64,14 @@ export class UsersService {
     public async getMyProfile(payload: PayloadType) {
         const userId = payload.id;
         let request = null;
+        let listings = null;
         if (payload.role === UserRole.SELLER) {
             request = await this.requestsService.checkIfUserHaveRequest(userId);
+            listings = await this.listingModel.find({ owner: userId });
         }
 
         const user = await this.getOneBy(userId);
-        const { fullName, email, phoneNumber, userImage, viewersCount, id, favorites } = user;
+        const { fullName, email, phoneNumber, userImage, viewersCount, id, favorites, role } = user;
 
         return {
             user: {
@@ -77,9 +81,13 @@ export class UsersService {
                 viewersCount,
                 phoneNumber,
                 userImage,
+                role,
                 favoritesCount: favorites.length,
-                request
-
+                ...(payload.role === UserRole.SELLER && {
+                    request,
+                    listings,
+                    listingsCount: listings.length,
+                }),
             }
         }
     }

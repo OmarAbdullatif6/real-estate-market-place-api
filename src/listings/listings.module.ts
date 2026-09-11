@@ -10,7 +10,7 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { GeocodingService } from '../common/services/geocoding.service';
 
 @Module({
-  exports: [ListingsService],
+  exports: [ListingsService,MongooseModule],
   imports: [
     AuthModule,
     MongooseModule.forFeature([
