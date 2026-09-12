@@ -109,7 +109,7 @@ export class RequestsService {
 
         await request.deleteOne();
         return {
-            message: "Request canceled successfully"
+            message: "Request cancelled successfully"
         }
     };
     public async getUserRequest(userId: string) {
