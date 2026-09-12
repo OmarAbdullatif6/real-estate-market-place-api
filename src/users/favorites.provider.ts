@@ -1,20 +1,20 @@
-import { Types } from "mongoose";
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { UsersService } from "./users.service";
+import { Types } from 'mongoose';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { UsersService } from './users.service';
 import { ListingsService } from './../listings/listings.service';
 @Injectable()
 export class FavoritesProvider {
   constructor(
     private readonly usersService: UsersService,
-    private readonly listingsService: ListingsService
-  ) { }
+    private readonly listingsService: ListingsService,
+  ) {}
 
   /**
-* 
-* @param userId 
-* @param listingId 
-* @returns 
-*/
+   *
+   * @param userId
+   * @param listingId
+   * @returns
+   */
   public async toggle(userId: string, listingId: string) {
     const user = await this.usersService.getOneBy(userId);
 
@@ -24,8 +24,6 @@ export class FavoritesProvider {
 
     // Remove from favorites
     if (favoriteIndex !== -1) {
-
-
       user.favorites.splice(favoriteIndex, 1);
 
       await user.save();
@@ -40,6 +38,7 @@ export class FavoritesProvider {
 
     // Add to favorites
     await this.listingsService.findOneById(listingId);
+    await this.listingsService.incrementFavoriteCount(listingId);
     user.favorites.push(new Types.ObjectId(listingId));
 
     await user.save();
@@ -52,52 +51,48 @@ export class FavoritesProvider {
     };
   }
 
-
-
   /**
-   * 
-   * @param userId 
+   *
+   * @param userId
    * @returns favorites of user
    */
   public async getAll(userId: string) {
     const user = await this.usersService.getOneBy(userId);
-    await user.populate("favorites");
-    return user.favorites
+    await user.populate('favorites');
+    return user.favorites;
   }
   /**
-   * 
-   * @param userId 
+   *
+   * @param userId
    * @returns favorites of user
    */
   public async getOneBy(userId: string, listingId: string) {
     const user = await this.usersService.getOneBy(userId);
-    const favoriteId = user.favorites.find((favorite) => favorite.toString() === listingId);
-    if (!favoriteId)
-      throw new NotFoundException("Listing not in Favorites"); 
-    
-    return this.listingsService.findOneById(listingId);
+    const favoriteId = user.favorites.find(
+      (favorite) => favorite.toString() === listingId,
+    );
+    if (!favoriteId) throw new NotFoundException('Listing not in Favorites');
 
+    return this.listingsService.findOneById(listingId);
   }
 
-
-
   /**
-   * 
-   * @param userId 
+   *
+   * @param userId
    * @returns cleared favorite
    */
   public async clear(userId: string) {
     const user = await this.usersService.getOneBy(userId);
-    if (user.favorites.length == 0) return {
-      message: 'No items in favorites',
-      favorites: user.favorites
-    };
+    if (user.favorites.length == 0)
+      return {
+        message: 'No items in favorites',
+        favorites: user.favorites,
+      };
     user.favorites = [];
     await user.save();
     return {
       message: 'Favorites cleared successfully',
-      favorites: user.favorites
+      favorites: user.favorites,
     };
-
   }
 }
