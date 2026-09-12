@@ -83,7 +83,7 @@ export class ListingsService {
     const listing = await this.listingModel
       .findById(id)
       .select(
-        'title price listingType propertyType areaSqMeters bedrooms bathrooms images location isPromoted createdAt owner status favouritesCount',
+        'title price listingType propertyType areaSqMeters bedrooms bathrooms images amenities location isPromoted createdAt owner status favouritesCount',
       )
       .populate('owner', 'phoneNumber email')
       .exec();
