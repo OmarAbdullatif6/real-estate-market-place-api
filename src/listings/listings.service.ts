@@ -80,7 +80,13 @@ export class ListingsService {
   }
 
   async findOneById(id: string): Promise<Listing> {
-    const listing = await this.listingModel.findById(id).exec();
+    const listing = await this.listingModel
+      .findById(id)
+      .select(
+        'title price listingType propertyType areaSqMeters bedrooms bathrooms images amenities location isPromoted createdAt owner status favouritesCount',
+      )
+      .populate('owner', 'phoneNumber email')
+      .exec();
     if (!listing) {
       throw new NotFoundException(`Listing with ID ${id} not found`);
     }
@@ -214,7 +220,6 @@ export class ListingsService {
       radiusKm,
     } = searchDto;
 
-    console.log('Search DTO:', searchDto);
     const filter: Record<string, any> = {
       status: ListingStatus.APPROVED,
       isAvailable: true,
@@ -285,12 +290,13 @@ export class ListingsService {
       };
     }
 
-    console.log('MongoDB filter:', JSON.stringify(filter, null, 2));
     return this.listingModel
       .find(filter)
       .select(
-        'title price listingType propertyType areaSqMeters bedrooms bathrooms images location isPromoted createdAt',
+        'title price listingType propertyType areaSqMeters bedrooms bathrooms images location isPromoted createdAt owner favouritesCount',
       )
+      .slice('images', 1)
+      .populate('owner', 'phoneNumber email')
       .exec();
   }
 
@@ -327,5 +333,12 @@ export class ListingsService {
     );
 
     await this.listingModel.deleteOne({ _id: id }).exec();
+  }
+
+  incrementFavoriteCount(listingId: string): Promise<void> {
+    return this.listingModel
+      .updateOne({ _id: listingId }, { $inc: { favouritesCount: 1 } })
+      .exec()
+      .then(() => {});
   }
 }

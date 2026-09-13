@@ -89,7 +89,7 @@ export default async function handler(req: any, res: any) {
 if (!process.env.VERCEL) {
   (async () => {
     const app = await createNestApp();
-    await app.listen(process.env.PORT ?? 3000);
+    await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
   })();
 }
 

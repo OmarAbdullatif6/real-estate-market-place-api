@@ -44,7 +44,7 @@ export class GeocodingService {
         },
       );
 
-      console.log('Nominatim response:', response.data);
+      // console.log('Nominatim response:', response.data);
       const address = response.data.address;
 
       if (!address) {

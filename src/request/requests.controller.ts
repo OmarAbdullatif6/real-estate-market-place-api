@@ -7,9 +7,9 @@ import {
     UseInterceptors,
     UseGuards,
     Get,
-    ParseIntPipe,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { ParseObjectIdPipe } from '../pipes/validateId.pipe';
 import {
     ApiBadRequestResponse,
     ApiBearerAuth,
@@ -146,7 +146,7 @@ export class RequestsController {
         description: 'Request not found.',
     })
     async cancelRequestFromUser(
-        @Param('reqId', ParseIntPipe) reqId: Types.ObjectId,
+        @Param('reqId', ParseObjectIdPipe) reqId: Types.ObjectId,
         @CurrentUser() payload: PayloadType,
     ) {
         return this.requestsService.cancel(reqId.toString(), payload.id);
