@@ -15,7 +15,7 @@ export class UsersService {
         @InjectModel(User.name) private readonly usersModel: Model<User>,
         private readonly cloudinaryService: CloudinaryService,
         private readonly requestsService: RequestsService,
-         @InjectModel(Listing.name) private readonly listingModel: Model<Listing>,
+        @InjectModel(Listing.name) private readonly listingModel: Model<Listing>,
     ) { }
     /**
       * 
@@ -32,11 +32,15 @@ export class UsersService {
         const user = await this.getOneBy(userId);
         //in case user have already image
         if (!file) throw new BadRequestException("Image is required")
-        if (user.userImage) {
-            await this.cloudinaryService.deleteFileAuto(user.userImage);
-        }
-        try {
 
+        try {
+            if (user.userImage) {
+                try {
+                    await this.cloudinaryService.deleteFile(user.userImage, "image");
+                } catch (error) {
+                    console.error('Failed to delete old profile image:', error);
+                }
+            }
             const uploadedImage = await this.cloudinaryService.uploadImage(file, 'real-estate/users',);
             user.userImage = uploadedImage.secure_url;
             await user.save()
@@ -54,7 +58,11 @@ export class UsersService {
     public async deleteUserImage(userId: string) {
         const user = await this.getOneBy(userId);
         if (!user.userImage) throw new BadRequestException("User doesn't have an image")
-        await this.cloudinaryService.deleteFile(user.userImage, 'image');
+        try {
+            await this.cloudinaryService.deleteFile(user.userImage, "image");
+        } catch (error) {
+            console.error('Failed to delete old profile image:', error);
+        }
         user.userImage = null;
         await user.save();
         return {
